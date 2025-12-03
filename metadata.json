@@ -1,0 +1,8 @@
+{
+  "name": "HVAC Hub OS",
+  "description": "End-to-End HVAC Operating System featuring AI Triage, Virtual Supply Chain, and Asset Sharing.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
