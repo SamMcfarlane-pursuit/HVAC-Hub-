@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Navigation, Truck, Plus, X, Briefcase, Clock, User, AlertTriangle, Wrench, Wand2, ChevronRight, Radio, ShieldAlert, Users, Power, Map as MapIcon, MousePointer2, Check } from 'lucide-react';
+import { MapPin, Navigation, Truck, Plus, X, Briefcase, Clock, User, AlertTriangle, Wrench, Wand2, ChevronRight, Radio, ShieldAlert, Users, Power, Map as MapIcon, MousePointer2, Check, Layers } from 'lucide-react';
 import { MOCK_TECHS, MOCK_JOBS } from '../constants';
 import { JobStatus, TechLevel, Job, Technician } from '../types';
 
@@ -83,6 +83,7 @@ export const JobMap: React.FC = () => {
   });
   const [optimizing, setOptimizing] = useState(false);
   const [hoveredTechId, setHoveredTechId] = useState<string | null>(null);
+  const [showStrategicZones, setShowStrategicZones] = useState(false);
 
   // Manual Location Picking State
   const [isLocationMode, setIsLocationMode] = useState(false);
@@ -106,7 +107,8 @@ export const JobMap: React.FC = () => {
                 location: {
                     ...tech.location,
                     lat: tech.location.lat + latDelta,
-                    lng: tech.location.lng + lngDelta
+                    lng: tech.location.lng + lngDelta,
+                    label: tech.location.label // Explicitly preserving label to satisfy Technician interface
                 }
             };
         }));
@@ -247,7 +249,8 @@ export const JobMap: React.FC = () => {
                 
                 // --- Route Simulation (Nearest Neighbor) ---
                 // We re-order the proposed jobs to find the most efficient path starting from Tech Location
-                let simPos = tech.location;
+                // Explicitly define simPos type to avoid assignment error when updating with job location
+                let simPos: { lat: number; lng: number } = tech.location;
                 const optimizedPath: Job[] = [];
                 let jobsToVisit = [...proposedJobs];
 
@@ -354,37 +357,42 @@ export const JobMap: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col p-6 space-y-4 relative">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 md:gap-0">
         <h2 className="text-2xl font-bold text-white flex items-center">
           <Navigation className="mr-2 text-blue-400" /> Dispatch & Routing (NYC)
         </h2>
-        <div className="flex space-x-2 items-center">
+        <div className="flex flex-wrap gap-2 items-center justify-end">
             <span className="hidden md:flex px-3 py-1 bg-red-900/30 text-red-400 border border-red-900/50 rounded text-xs items-center font-mono animate-pulse">
                 <Radio className="w-3 h-3 mr-1" /> LIVE GPS
             </span>
-            <span className="hidden md:flex px-3 py-1 bg-emerald-900/50 text-emerald-400 border border-emerald-800 rounded text-sm items-center">
-                <Truck className="w-3 h-3 mr-1" /> {technicians.filter(t => t.isAvailable).length} Active Vans
-            </span>
             
+            {/* Strategic Zones Toggle */}
+            <button 
+                onClick={() => setShowStrategicZones(!showStrategicZones)}
+                className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center transition border ${showStrategicZones ? 'bg-purple-900 text-purple-300 border-purple-700' : 'bg-slate-700 text-slate-300 border-slate-600 hover:bg-slate-600'}`}
+            >
+                <Layers className="w-4 h-4 mr-1" /> Zones
+            </button>
+
             <button 
                 onClick={() => setIsTechStatusModalOpen(true)}
-                className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-sm font-bold flex items-center transition border border-slate-600"
+                className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center transition border border-slate-600"
             >
-                <Users className="w-4 h-4 mr-1" /> Tech Status
+                <Users className="w-4 h-4 mr-1" /> Techs
             </button>
 
             <button 
                 onClick={handleOptimizeRoutes}
                 disabled={optimizing}
-                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center transition shadow-lg 
+                className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center transition shadow-lg 
                     ${optimizing ? 'bg-indigo-800 text-indigo-300 cursor-wait' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-900/20'}`}
             >
                 <Wand2 className={`w-4 h-4 mr-1 ${optimizing ? 'animate-spin' : ''}`} /> 
-                {optimizing ? 'Routing...' : 'Optimize Routes'}
+                {optimizing ? 'Routing...' : 'Optimize'}
             </button>
             <button 
                 onClick={handleOpenBookJob}
-                className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center transition shadow-lg shadow-blue-900/20"
+                className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center transition shadow-lg shadow-blue-900/20"
             >
                 <Plus className="w-4 h-4 mr-1" /> Book Job
             </button>
@@ -410,6 +418,20 @@ export const JobMap: React.FC = () => {
             <div className="absolute top-0 bottom-0 left-[18%] w-[12%] bg-blue-950/50 skew-x-12 transform -translate-x-10 border-x border-blue-900/30"></div>
             <div className="absolute top-0 bottom-0 right-[28%] w-[10%] bg-blue-950/50 skew-x-6 border-x border-blue-900/30"></div>
             
+            {/* STRATEGIC ZONES OVERLAY */}
+            {showStrategicZones && (
+                <>
+                    {/* Zone 1: NYC Commercial (Midtown/Downtown) */}
+                    <div className="absolute top-[35%] left-[55%] w-[25%] h-[35%] border-2 border-emerald-500/50 bg-emerald-500/10 rounded-lg flex items-center justify-center animate-fadeIn">
+                        <span className="text-emerald-400 font-bold text-xs uppercase bg-slate-900/80 px-2 py-1 rounded backdrop-blur">Zone 1: NYC Commercial</span>
+                    </div>
+                     {/* Zone 2: NJ Residential (Jersey City/Hoboken) */}
+                    <div className="absolute top-[40%] left-[5%] w-[20%] h-[40%] border-2 border-purple-500/50 bg-purple-500/10 rounded-lg flex items-center justify-center animate-fadeIn">
+                        <span className="text-purple-400 font-bold text-xs uppercase bg-slate-900/80 px-2 py-1 rounded backdrop-blur">Zone 2: NJ Residential</span>
+                    </div>
+                </>
+            )}
+
             {/* Landmarks Labels */}
             {LANDMARKS.map((mark, i) => {
                  const pos = getProjectedPosition(mark.lat, mark.lng);
@@ -580,488 +602,282 @@ export const JobMap: React.FC = () => {
              let sequenceNo = null;
              if (assignedTech) {
                  const techJobs = jobs.filter(j => j.techId === assignedTech.id && j.status !== JobStatus.COMPLETED);
-                 // Re-sort locally to match the visual line logic (Distance)
-                 // This ensures the badge number matches the visual path.
-                 // NOTE: This re-sorting logic must match the SVG path logic exactly.
+                 
                  let currentPos = getProjectedPosition(assignedTech.location.lat, assignedTech.location.lng);
                  let remaining = [...techJobs];
                  let safety = 0;
                  const sortedIds: string[] = [];
 
                  while(remaining.length > 0 && safety < 20) {
-                     remaining.sort((a,b) => {
-                         const pA = getProjectedPosition(a.location.lat, a.location.lng);
-                         const pB = getProjectedPosition(b.location.lat, b.location.lng);
-                         const dA = Math.hypot(pA.left - currentPos.left, pA.top - currentPos.top);
-                         const dB = Math.hypot(pB.left - currentPos.left, pB.top - currentPos.top);
-                         return dA - dB;
-                     });
-                     const next = remaining.shift();
-                     if (next) {
-                         sortedIds.push(next.id);
-                         currentPos = getProjectedPosition(next.location.lat, next.location.lng);
-                     }
-                     safety++;
+                    remaining.sort((a, b) => {
+                        const posA = getProjectedPosition(a.location.lat, a.location.lng);
+                        const posB = getProjectedPosition(b.location.lat, b.location.lng);
+                        const distA = Math.hypot(posA.left - currentPos.left, posA.top - currentPos.top);
+                        const distB = Math.hypot(posB.left - currentPos.left, posB.top - currentPos.top);
+                        return distA - distB;
+                    });
+                    
+                    const next = remaining.shift();
+                    if (next) {
+                        sortedIds.push(next.id);
+                        currentPos = getProjectedPosition(next.location.lat, next.location.lng);
+                    }
+                    safety++;
                  }
-                 sequenceNo = sortedIds.indexOf(job.id) + 1;
+                 const idx = sortedIds.indexOf(job.id);
+                 if (idx >= 0) sequenceNo = idx + 1;
              }
 
              return (
-               <div 
-               key={job.id}
-               className={`absolute transform -translate-x-1/2 -translate-y-1/2 z-20 group/pin cursor-pointer hover:z-50 transition-all duration-300 ${isDimmed ? 'opacity-20 blur-[1px]' : 'opacity-100'}`}
-               style={{ top: `${pos.top}%`, left: `${pos.left}%` }}
-               onClick={() => setSelectedJob(job)}
-               onMouseEnter={() => job.techId && setHoveredTechId(job.techId)}
-               onMouseLeave={() => setHoveredTechId(null)}
-            >
-               <div className={`relative flex items-center justify-center w-7 h-7 rounded-full shadow-lg transition-transform hover:scale-110
-                   ${isUnassigned 
-                       ? 'bg-red-600 ring-2 ring-red-500/50 animate-pulse' 
-                       : 'bg-slate-900 ring-2'
-                   }
-               `} style={{ borderColor: techColor || 'transparent', ringColor: techColor || 'transparent' }}>
-                   {isUnassigned && <AlertTriangle className="w-4 h-4 text-white" />}
-                   {!isUnassigned && isInProgress && <Wrench className="w-3 h-3 text-white animate-spin-slow" />}
-                   {!isUnassigned && !isInProgress && <Briefcase className="w-3 h-3 text-white" />}
-
-                   {/* Sequence Badge */}
-                   {!isUnassigned && sequenceNo && (
-                       <div className="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-white text-[9px] font-bold flex items-center justify-center shadow border border-slate-300" style={{ color: techColor || '#000' }}>
-                           {sequenceNo}
-                       </div>
-                   )}
-               </div>
-               
-               {/* Enhanced Tooltip */}
-               <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 bg-slate-900/95 backdrop-blur-xl text-white text-xs p-0 rounded-lg border border-slate-600 whitespace-nowrap opacity-0 group-hover/pin:opacity-100 pointer-events-none z-50 shadow-2xl transition-all duration-200 min-w-[180px] flex flex-col items-center overflow-hidden">
-                   <div className="w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent"></div>
-                   <div className="p-3 w-full">
-                        <div className="font-bold text-sm mb-1">{job.clientName}</div>
-                        <div className="text-slate-300 flex items-center mb-2"><MapPin className="w-3 h-3 mr-1 text-slate-500" /> {job.address}</div>
-                        
-                        {isUnassigned ? (
-                            <div className="flex items-center text-red-400 font-bold uppercase text-[10px] tracking-wide bg-red-900/20 py-1 px-2 rounded border border-red-900/50 w-full justify-center">
-                                <AlertTriangle className="w-3 h-3 mr-1" /> Unassigned
-                            </div>
-                        ) : (
-                            <div className="flex items-center justify-between gap-2 mt-2">
-                                <div className="flex items-center text-[10px] bg-slate-800 px-2 py-1 rounded border border-slate-700">
-                                    <div className="w-2 h-2 rounded-full mr-1" style={{ backgroundColor: techColor || '#fff' }}></div>
-                                    <span className="font-medium text-slate-300">{assignedTech?.name}</span>
-                                </div>
-                                <div className="text-[10px] font-mono text-slate-400 bg-slate-800 px-2 py-1 rounded border border-slate-700">
-                                    Stop #{sequenceNo}
-                                </div>
-                            </div>
+                 <div 
+                    key={job.id}
+                    onClick={(e) => { e.stopPropagation(); setSelectedJob(job); }}
+                    className={`absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all z-20 ${isDimmed ? 'opacity-20' : 'opacity-100'} hover:z-40`}
+                    style={{ top: `${pos.top}%`, left: `${pos.left}%` }}
+                 >
+                    <div className="relative group">
+                        {isInProgress && (
+                            <div className="absolute inset-0 rounded-full animate-ping bg-emerald-500 opacity-40"></div>
                         )}
-                        <div className="text-[10px] text-slate-500 mt-2 text-center border-t border-slate-800 pt-1">
-                             Est. Duration: <span className="text-slate-300">{job.estimatedDuration || 2} hrs</span>
+                        <div className={`relative flex items-center justify-center w-8 h-8 rounded-full border-2 shadow-lg transition-transform hover:scale-110 
+                            ${isUnassigned ? 'bg-slate-700 border-white text-white' : ''}`}
+                            style={{ 
+                                backgroundColor: isUnassigned ? '#334155' : '#1e293b',
+                                borderColor: techColor || '#fff'
+                            }}
+                        >
+                            {isInProgress ? <Wrench className="w-4 h-4 text-emerald-400" /> : <Briefcase className={`w-4 h-4 ${isUnassigned ? 'text-white' : 'text-slate-300'}`} />}
+                            
+                            {/* Sequence Badge */}
+                            {sequenceNo && (
+                                <div className="absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-sm border border-slate-900" style={{ backgroundColor: techColor || '#64748b' }}>
+                                    {sequenceNo}
+                                </div>
+                            )}
                         </div>
-                   </div>
-                   <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-[1px] border-8 border-transparent border-t-slate-600"></div>
-                   <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-[2px] border-8 border-transparent border-t-slate-900"></div>
-               </div>
-            </div>
+
+                        {/* Hover Tooltip */}
+                        <div className="absolute top-10 left-1/2 -translate-x-1/2 w-32 bg-slate-900/95 text-white p-2 rounded border border-slate-700 shadow-xl opacity-0 group-hover:opacity-100 transition pointer-events-none z-50">
+                            <div className="text-xs font-bold truncate">{job.clientName}</div>
+                            <div className="text-[10px] text-slate-400 truncate">{job.description}</div>
+                        </div>
+                    </div>
+                 </div>
              );
           })}
-
-          {/* Map Legend */}
-          {!isLocationMode && (
-              <div className="absolute bottom-4 right-4 bg-slate-900/90 backdrop-blur p-3 rounded-lg border border-slate-700 text-xs text-slate-300 pointer-events-none z-20 shadow-xl">
-                 <div className="font-bold text-white mb-2 uppercase tracking-wider text-[10px] border-b border-slate-700 pb-1">Routing Key</div>
-                 <div className="space-y-1.5">
-                    <div className="flex items-center"><div className="w-2 h-2 bg-red-600 rounded-full animate-pulse mr-2"></div> Unassigned Job</div>
-                    <div className="flex items-center"><div className="w-2 h-2 bg-slate-500 rounded-full mr-2"></div> Off-Duty Tech</div>
-                    <div className="flex items-center"><Wrench className="w-3 h-3 text-emerald-400 mr-2" /> Active Job</div>
-                    <div className="border-t border-slate-700 my-1 pt-1 opacity-50"></div>
-                    {technicians.filter(t => t.isAvailable).slice(0, 3).map((tech, idx) => (
-                        <div key={tech.id} className="flex items-center text-[10px]">
-                            <div className="w-3 h-0.5 mr-2" style={{ backgroundColor: TECH_COLORS[idx % TECH_COLORS.length] }}></div>
-                            {tech.name}
-                        </div>
-                    ))}
-                 </div>
-              </div>
-          )}
         </div>
 
-        {/* Live List */}
-        <div className="space-y-4 overflow-y-auto h-[500px] lg:h-full pr-2">
-            <h3 className="text-slate-400 font-semibold uppercase text-xs tracking-wider sticky top-0 bg-slate-950 py-2 z-10 flex justify-between items-center">
-                <span>Active Assignments</span>
-                <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-500">
-                    {jobs.filter(j => j.status !== JobStatus.COMPLETED).length} Open
+        {/* Dispatch Panel */}
+        <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 flex flex-col h-[500px] lg:h-full overflow-hidden">
+            <h3 className="text-white font-bold mb-4 flex items-center">
+                <Briefcase className="w-4 h-4 mr-2 text-slate-400" /> 
+                Job Queue
+                <span className="ml-2 bg-slate-700 text-slate-300 text-xs px-2 py-0.5 rounded-full">
+                    {jobs.filter(j => j.status !== JobStatus.COMPLETED).length}
                 </span>
             </h3>
-            {jobs.map(job => {
-                const assignedTech = technicians.find(t => t.id === job.techId);
-                const assignedTechIdx = technicians.findIndex(t => t.id === job.techId);
-                const techColor = assignedTech ? TECH_COLORS[assignedTechIdx % TECH_COLORS.length] : null;
 
-                return (
-                <div 
-                    key={job.id} 
-                    onClick={() => setSelectedJob(job)}
-                    onMouseEnter={() => job.techId && setHoveredTechId(job.techId)}
-                    onMouseLeave={() => setHoveredTechId(null)}
-                    className={`bg-slate-800 p-4 rounded-lg border transition group cursor-pointer relative overflow-hidden
-                        ${!job.techId ? 'border-l-4 border-l-red-500 border-y-slate-700 border-r-slate-700' : 'border-slate-700 hover:border-slate-500'}
-                    `}
-                    style={{ borderLeftColor: job.techId ? techColor : undefined, borderLeftWidth: job.techId ? '4px' : undefined }}
-                >
-                    <div className="flex justify-between items-start mb-2">
-                        <span className="font-bold text-white text-sm">{job.clientName}</span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase font-bold tracking-wide border
-                            ${getStatusColor(job.status)}`}>
-                            {job.status}
-                        </span>
-                    </div>
-                    <p className="text-xs text-slate-400 mb-2 truncate group-hover:whitespace-normal">{job.description}</p>
-                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-700">
-                        <div className="flex items-center text-xs text-slate-500">
-                            <MapPin className="w-3 h-3 mr-1" />
-                            {job.address}
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+                {jobs.sort((a,b) => (a.status === JobStatus.PENDING ? -1 : 1)).map(job => (
+                    <div 
+                        key={job.id}
+                        onClick={() => setSelectedJob(job)}
+                        className={`p-3 rounded-lg border cursor-pointer transition relative overflow-hidden group
+                            ${selectedJob?.id === job.id ? 'border-indigo-500 bg-indigo-900/10 ring-1 ring-indigo-500/50' : 'border-slate-700 bg-slate-900 hover:border-slate-600'}`}
+                    >
+                        {/* Status Bar */}
+                        <div className={`absolute left-0 top-0 bottom-0 w-1 ${
+                            job.status === JobStatus.IN_PROGRESS ? 'bg-emerald-500' :
+                            job.status === JobStatus.EN_ROUTE ? 'bg-blue-500' :
+                            'bg-red-500'
+                        }`}></div>
+
+                        <div className="pl-3">
+                            <div className="flex justify-between items-start mb-1">
+                                <span className="font-bold text-sm text-white truncate">{job.clientName}</span>
+                                <span className="text-[10px] text-slate-400 font-mono">{job.timestamp}</span>
+                            </div>
+                            <p className="text-xs text-slate-400 mb-2 truncate">{job.description}</p>
+                            
+                            <div className="flex justify-between items-center">
+                                {job.techId ? (
+                                    <div className="flex items-center">
+                                        <div className="w-5 h-5 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center overflow-hidden mr-1.5">
+                                            <img src={technicians.find(t => t.id === job.techId)?.avatar} className="w-full h-full object-cover" alt="Tech" />
+                                        </div>
+                                        <span className="text-xs text-slate-300">{technicians.find(t => t.id === job.techId)?.name.split(' ')[0]}</span>
+                                    </div>
+                                ) : (
+                                    <span className="text-[10px] bg-red-900/30 text-red-400 px-1.5 py-0.5 rounded border border-red-900/50">Unassigned</span>
+                                )}
+                                
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded border ${
+                                    job.status === JobStatus.IN_PROGRESS ? 'bg-emerald-900/20 text-emerald-400 border-emerald-900/50' :
+                                    job.status === JobStatus.EN_ROUTE ? 'bg-blue-900/20 text-blue-400 border-blue-900/50' :
+                                    'bg-slate-700 text-slate-400 border-slate-600'
+                                }`}>
+                                    {job.status}
+                                </span>
+                            </div>
                         </div>
-                        {job.techId ? (
-                            <div className="text-xs font-medium flex items-center" style={{ color: techColor || '#94a3b8' }}>
-                                <Truck className="w-3 h-3 mr-1" />
-                                {technicians.find(t => t.id === job.techId)?.name.split(' ')[0]}
-                            </div>
-                        ) : (
-                            <div className="text-xs text-red-400 font-bold flex items-center">
-                                <AlertTriangle className="w-3 h-3 mr-1" /> Unassigned
-                            </div>
-                        )}
                     </div>
-                </div>
-            )})}
+                ))}
+            </div>
         </div>
       </div>
 
-      {/* Tech Status Modal */}
-      {isTechStatusModalOpen && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-fadeIn">
-                <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-800">
-                    <h3 className="font-bold text-white flex items-center">
-                        <Users className="w-4 h-4 mr-2 text-blue-400" /> Technician Status Management
-                    </h3>
-                    <button onClick={() => setIsTechStatusModalOpen(false)} className="text-slate-400 hover:text-white transition">
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-                <div className="p-2 overflow-y-auto max-h-[60vh]">
-                    {technicians.map((tech, idx) => (
-                        <div key={tech.id} className="p-3 border-b border-slate-800 last:border-0 flex justify-between items-center hover:bg-slate-800/50 transition">
-                            <div className="flex items-center">
-                                <div className="w-8 h-8 rounded-full flex items-center justify-center mr-3 font-bold text-xs text-white shadow-sm"
-                                     style={{ backgroundColor: tech.isAvailable ? TECH_COLORS[idx % TECH_COLORS.length] : '#334155' }}>
-                                    {tech.name.charAt(0)}
-                                </div>
-                                <div>
-                                    <div className={`text-sm font-bold ${!tech.isAvailable ? 'text-slate-500' : 'text-white'}`}>{tech.name}</div>
-                                    <div className="text-xs text-slate-500">{tech.level}</div>
-                                </div>
-                            </div>
-                            <div className="flex items-center">
-                                <span className={`text-[10px] uppercase font-bold mr-3 ${tech.isAvailable ? 'text-emerald-400' : 'text-slate-500'}`}>
-                                    {tech.isAvailable ? 'Available' : 'Unavailable'}
-                                </span>
-                                <button 
-                                    onClick={() => toggleTechAvailability(tech.id)}
-                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${
-                                        tech.isAvailable ? 'bg-emerald-600' : 'bg-slate-700'
-                                    }`}
-                                >
-                                    <span
-                                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ease-in-out ${
-                                            tech.isAvailable ? 'translate-x-6' : 'translate-x-1'
-                                        }`}
-                                    />
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-                <div className="p-4 bg-slate-800 border-t border-slate-700">
-                     <button 
-                         onClick={() => setIsTechStatusModalOpen(false)}
-                         className="w-full py-2 bg-slate-700 hover:bg-slate-600 text-white rounded text-sm font-bold transition"
-                     >
-                         Close
-                     </button>
-                </div>
-            </div>
-        </div>
-      )}
-
-      {/* Booking Modal */}
+      {/* Book Job Modal */}
       {isModalOpen && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-fadeIn">
-                <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-800">
-                    <h3 className="font-bold text-white flex items-center">
-                        <Briefcase className="w-4 h-4 mr-2 text-blue-400" /> Book New Job
-                    </h3>
-                    <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white transition">
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-400 mb-1">Client Name</label>
-                        <input 
-                            required
-                            type="text" 
-                            className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm focus:border-blue-500 outline-none focus:ring-1 focus:ring-blue-500"
-                            placeholder="e.g. Gotham Tower Management"
-                            value={formData.clientName}
-                            onChange={e => setFormData({...formData, clientName: e.target.value})}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-400 mb-1">Address / Location</label>
-                        <div className="flex space-x-2">
-                             <input 
-                                required
-                                type="text" 
-                                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm focus:border-blue-500 outline-none focus:ring-1 focus:ring-blue-500"
-                                placeholder="e.g. 123 Broadway, New York, NY"
-                                value={formData.address}
-                                onChange={e => setFormData({...formData, address: e.target.value})}
-                            />
-                            <button 
-                                type="button" 
-                                onClick={() => { setIsModalOpen(false); setIsLocationMode(true); }}
-                                className="bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700 px-3 rounded flex items-center justify-center transition"
-                                title="Pick location on map"
-                            >
-                                <MapIcon className="w-4 h-4" />
-                            </button>
-                        </div>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-400 mb-1">Issue Description</label>
-                        <textarea 
-                            required
-                            className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm focus:border-blue-500 outline-none focus:ring-1 focus:ring-blue-500 h-24 resize-none"
-                            placeholder="Describe the issue..."
-                            value={formData.description}
-                            onChange={e => setFormData({...formData, description: e.target.value})}
-                        />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-semibold text-slate-400 mb-1">Required Skill</label>
-                            <select 
-                                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm focus:border-blue-500 outline-none focus:ring-1 focus:ring-blue-500"
-                                value={formData.requiredSkillLevel}
-                                onChange={e => setFormData({...formData, requiredSkillLevel: e.target.value as TechLevel})}
-                            >
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-slate-800 rounded-lg border border-slate-700 shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+                  <div className="bg-slate-900 p-4 border-b border-slate-700 flex justify-between items-center">
+                      <h3 className="text-white font-bold flex items-center">
+                          <Plus className="w-4 h-4 mr-2 text-indigo-400" /> Book New Job
+                      </h3>
+                      <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+                  </div>
+                  
+                  <form onSubmit={handleSubmit} className="p-4 space-y-4">
+                      {/* Location Preview */}
+                      <div className="bg-slate-900 rounded p-3 border border-slate-700 flex justify-between items-center">
+                          <div className="flex items-center text-slate-300 text-sm">
+                              <MapPin className="w-4 h-4 mr-2 text-orange-400" />
+                              {newJobLocation ? (
+                                  <span className="text-white">{newJobLocation.lat.toFixed(4)}, {newJobLocation.lng.toFixed(4)}</span>
+                              ) : (
+                                  <span className="italic text-slate-500">Auto-assigned (Random)</span>
+                              )}
+                          </div>
+                          <button 
+                              type="button"
+                              onClick={() => { setIsModalOpen(false); setIsLocationMode(true); }}
+                              className="text-xs bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded transition"
+                          >
+                              {newJobLocation ? "Change" : "Pick on Map"}
+                          </button>
+                      </div>
+
+                      <div>
+                          <label className="block text-xs font-bold text-slate-400 mb-1">Client Name</label>
+                          <input required className="w-full bg-slate-700 border border-slate-600 rounded p-2 text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none" 
+                                 value={formData.clientName} onChange={e => setFormData({...formData, clientName: e.target.value})} placeholder="e.g. Starbucks #2401" />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-slate-400 mb-1">Issue Description</label>
+                          <textarea required className="w-full bg-slate-700 border border-slate-600 rounded p-2 text-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none h-20" 
+                                 value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="e.g. Walk-in cooler temp alarm" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-bold text-slate-400 mb-1">Skill Required</label>
+                            <select className="w-full bg-slate-700 border border-slate-600 rounded p-2 text-white text-sm outline-none"
+                                value={formData.requiredSkillLevel} onChange={e => setFormData({...formData, requiredSkillLevel: e.target.value as TechLevel})}>
                                 <option value={TechLevel.APPRENTICE}>Apprentice</option>
                                 <option value={TechLevel.JOURNEYMAN}>Journeyman</option>
                                 <option value={TechLevel.MASTER}>Master</option>
                             </select>
-                        </div>
-                         <div>
-                            <label className="block text-xs font-semibold text-slate-400 mb-1">Est. Duration (Hrs)</label>
-                            <input 
-                                required
-                                type="number" 
-                                min="0.5"
-                                step="0.5"
-                                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white text-sm focus:border-blue-500 outline-none focus:ring-1 focus:ring-blue-500"
-                                value={formData.estimatedDuration}
-                                onChange={e => setFormData({...formData, estimatedDuration: parseFloat(e.target.value)})}
-                            />
-                        </div>
-                    </div>
-                    <div className="pt-2 flex space-x-3">
-                        <button 
-                            type="button" 
-                            onClick={() => setIsModalOpen(false)}
-                            className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-sm font-semibold transition"
-                        >
-                            Cancel
-                        </button>
-                        <button 
-                            type="submit" 
-                            className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm font-bold transition flex justify-center items-center shadow-lg shadow-blue-900/20"
-                        >
-                            Dispatch Job
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-slate-400 mb-1">Est. Duration (Hrs)</label>
+                            <input type="number" min="1" max="8" className="w-full bg-slate-700 border border-slate-600 rounded p-2 text-white text-sm outline-none"
+                                value={formData.estimatedDuration} onChange={e => setFormData({...formData, estimatedDuration: Number(e.target.value)})} />
+                          </div>
+                      </div>
+                      
+                      <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded transition shadow-lg shadow-indigo-900/20">
+                          Dispatch Ticket
+                      </button>
+                  </form>
+              </div>
+          </div>
       )}
 
-      {/* Job Details Modal */}
-      {selectedJob && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-fadeIn">
-                <div className="p-4 border-b border-slate-800 flex justify-between items-start bg-slate-800">
-                    <div>
-                        <h3 className="font-bold text-white text-lg flex items-center">
-                            {selectedJob.clientName}
-                        </h3>
-                        <span className="text-xs text-slate-500">ID: {selectedJob.id}</span>
+      {/* Tech Status Modal */}
+      {isTechStatusModalOpen && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+               <div className="bg-slate-800 rounded-lg border border-slate-700 shadow-2xl w-full max-w-md animate-in fade-in zoom-in duration-200">
+                    <div className="bg-slate-900 p-4 border-b border-slate-700 flex justify-between items-center">
+                      <h3 className="text-white font-bold flex items-center">
+                          <Users className="w-4 h-4 mr-2 text-emerald-400" /> Technician Roster
+                      </h3>
+                      <button onClick={() => setIsTechStatusModalOpen(false)} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
                     </div>
-                    <button onClick={() => setSelectedJob(null)} className="text-slate-400 hover:text-white transition">
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-                <div className="p-6 space-y-6">
-                    <div className="flex items-center justify-between">
-                         <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${getStatusColor(selectedJob.status)}`}>
-                            {selectedJob.status}
-                         </div>
-                         <div className="flex items-center text-slate-400 text-sm">
-                             <Clock className="w-4 h-4 mr-1.5" />
-                             {selectedJob.timestamp}
-                         </div>
-                    </div>
-
-                    <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700/50">
-                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Issue Description</h4>
-                        <p className="text-slate-200 text-sm leading-relaxed">{selectedJob.description}</p>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                         {selectedJob.requiredSkillLevel && (
-                            <div className="bg-slate-800/30 p-3 rounded-lg border border-slate-700/30 flex justify-between items-center">
-                                <span className="text-xs text-slate-500 font-semibold uppercase">Skill</span>
-                                <span className={`text-sm font-bold ${
-                                    selectedJob.requiredSkillLevel === TechLevel.MASTER ? 'text-purple-400' : 
-                                    selectedJob.requiredSkillLevel === TechLevel.JOURNEYMAN ? 'text-blue-400' : 'text-slate-300'
-                                }`}>
-                                    {selectedJob.requiredSkillLevel}
-                                </span>
-                            </div>
-                        )}
-                        <div className="bg-slate-800/30 p-3 rounded-lg border border-slate-700/30 flex justify-between items-center">
-                            <span className="text-xs text-slate-500 font-semibold uppercase">Est. Time</span>
-                            <span className="text-sm font-bold text-slate-300">{selectedJob.estimatedDuration || 2}h</span>
-                        </div>
-                    </div>
-
-
-                    <div className="space-y-4">
-                        <div className="flex items-start">
-                            <div className="bg-slate-800 p-2 rounded-lg mr-3">
-                                <MapPin className="w-5 h-5 text-blue-400" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-slate-500">Location</label>
-                                <div className="text-slate-200 text-sm">{selectedJob.address}</div>
-                            </div>
-                        </div>
-
-                        <div className="flex items-start">
-                            <div className="bg-slate-800 p-2 rounded-lg mr-3">
-                                <User className="w-5 h-5 text-purple-400" />
-                            </div>
-                            <div className="flex-1">
-                                <label className="block text-xs font-semibold text-slate-500">Assigned Technician</label>
-                                {selectedJob.techId ? (
-                                    <div className="text-slate-200 text-sm font-medium">
-                                        {technicians.find(t => t.id === selectedJob.techId)?.name || 'Unknown Tech'}
-                                        <span className="block text-xs text-slate-500 font-normal">{technicians.find(t => t.id === selectedJob.techId)?.level}</span>
+                    <div className="p-2">
+                        {technicians.map(tech => (
+                            <div key={tech.id} className="flex items-center justify-between p-3 hover:bg-slate-700/50 rounded transition">
+                                <div className="flex items-center">
+                                    <img src={tech.avatar} className={`w-10 h-10 rounded-full border-2 mr-3 ${tech.isAvailable ? 'border-emerald-500' : 'border-slate-600 grayscale'}`} alt={tech.name} />
+                                    <div>
+                                        <div className="text-white font-bold text-sm">{tech.name}</div>
+                                        <div className={`text-xs ${tech.level === TechLevel.MASTER ? 'text-purple-400' : 'text-blue-400'}`}>{tech.level}</div>
                                     </div>
-                                ) : (
-                                    <div className="mt-1">
-                                         <div className="text-red-400 text-sm italic font-bold flex items-center mb-2">
-                                            <AlertTriangle className="w-4 h-4 mr-1" />
-                                            Unassigned - Waiting for Dispatch
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        
-                        {/* Dispatch Interface for Unassigned Jobs */}
-                        {!selectedJob.techId && (
-                            <div className="border-t border-slate-800 pt-4">
-                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Available Technicians (Sorted by Proximity)</h4>
-                                <div className="space-y-2 max-h-40 overflow-y-auto">
-                                    {technicians
-                                        .map(tech => {
-                                            // Calculate Real World Distance (Miles)
-                                            const dist = calculateDistance(
-                                                tech.location.lat, tech.location.lng,
-                                                selectedJob.location.lat, selectedJob.location.lng
-                                            );
-                                            return { ...tech, dist };
-                                        })
-                                        .sort((a, b) => {
-                                            // Sort unavailable to bottom, then by distance
-                                            if (a.isAvailable !== b.isAvailable) return a.isAvailable ? -1 : 1;
-                                            return a.dist - b.dist;
-                                        })
-                                        .map((item, index) => {
-                                            const { dist, ...tech } = item;
-                                            const distMiles = dist.toFixed(1);
-                                            const isQualified = !selectedJob.requiredSkillLevel || getLevelValue(tech.level) >= getLevelValue(selectedJob.requiredSkillLevel);
-                                            const isAvailable = tech.isAvailable;
-                                            const isBestMatch = index === 0 && isQualified && isAvailable;
-
-                                            return (
-                                                <div key={tech.id} className={`flex justify-between items-center p-2 rounded border transition 
-                                                    ${!isAvailable 
-                                                        ? 'bg-slate-900/50 border-slate-800 opacity-60' 
-                                                        : isBestMatch
-                                                            ? 'border-emerald-500/50 bg-emerald-900/10'
-                                                            : 'bg-slate-950 border-slate-800 hover:border-slate-600'
-                                                    }`}>
-                                                    <div className="flex items-center">
-                                                        <div className={`w-2 h-2 rounded-full mr-2 
-                                                            ${!isAvailable 
-                                                                ? 'bg-slate-600'
-                                                                : tech.level === TechLevel.MASTER ? 'bg-purple-500' : 'bg-blue-500'
-                                                            }`}></div>
-                                                        <div>
-                                                            <div className="text-sm font-bold text-slate-200 flex items-center">
-                                                                {tech.name}
-                                                                {isBestMatch && <span className="ml-2 text-[10px] text-emerald-400 bg-emerald-900/30 px-1.5 py-0.5 rounded border border-emerald-800">BEST MATCH</span>}
-                                                                {isAvailable && !isQualified && <span className="ml-2 text-[10px] text-red-400 bg-red-900/30 px-1.5 py-0.5 rounded border border-red-800 flex items-center"><ShieldAlert className="w-3 h-3 mr-1" /> UNDERQUALIFIED</span>}
-                                                                {!isAvailable && <span className="ml-2 text-[10px] text-slate-500 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700 flex items-center"><Power className="w-3 h-3 mr-1" /> OFF-DUTY</span>}
-                                                            </div>
-                                                            <div className="text-[10px] text-slate-500">{tech.level} • {distMiles} mi away</div>
-                                                        </div>
-                                                    </div>
-                                                    <button 
-                                                        onClick={() => handleAssign(tech.id)}
-                                                        disabled={!isAvailable}
-                                                        className={`text-xs px-2 py-1.5 rounded font-bold flex items-center transition
-                                                            ${!isAvailable
-                                                                ? 'bg-transparent text-slate-600 cursor-not-allowed'
-                                                                : isQualified 
-                                                                    ? 'bg-blue-600 hover:bg-blue-500 text-white' 
-                                                                    : 'bg-slate-700 hover:bg-slate-600 text-slate-400 border border-slate-600'
-                                                            }`}
-                                                    >
-                                                        {isAvailable ? (isQualified ? 'Assign' : 'Force Assign') : 'Unavailable'} {isAvailable && <ChevronRight className="w-3 h-3 ml-1" />}
-                                                    </button>
-                                                </div>
-                                            );
-                                        })}
                                 </div>
+                                <button 
+                                    onClick={() => toggleTechAvailability(tech.id)}
+                                    className={`px-3 py-1 rounded text-xs font-bold transition flex items-center ${
+                                        tech.isAvailable ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-900' : 'bg-slate-700 text-slate-400 border border-slate-600'
+                                    }`}
+                                >
+                                    <Power className="w-3 h-3 mr-1" />
+                                    {tech.isAvailable ? 'Active' : 'Off-Duty'}
+                                </button>
                             </div>
-                        )}
+                        ))}
                     </div>
+               </div>
+          </div>
+      )}
 
-                    <div className="pt-2">
-                        <button 
-                            onClick={() => setSelectedJob(null)}
-                            className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-bold transition border border-slate-700 hover:border-slate-600"
-                        >
-                            Close Details
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+      {/* Selected Job Detail Modal (Quick View) */}
+      {selectedJob && (
+          <div className="fixed bottom-6 right-6 z-40 w-80 bg-slate-800/95 backdrop-blur border border-slate-600 rounded-lg shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4">
+              <div className="bg-indigo-600 p-3 flex justify-between items-start">
+                  <div>
+                      <h4 className="text-white font-bold text-sm">{selectedJob.clientName}</h4>
+                      <div className="text-indigo-200 text-xs font-mono">{selectedJob.id}</div>
+                  </div>
+                  <button onClick={() => setSelectedJob(null)} className="text-indigo-200 hover:text-white"><X className="w-4 h-4" /></button>
+              </div>
+              <div className="p-4 space-y-3">
+                  <div className="text-sm text-slate-300">{selectedJob.description}</div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-slate-900 p-2 rounded border border-slate-700">
+                          <span className="block text-slate-500 mb-0.5">Status</span>
+                          <span className={`font-bold ${
+                              selectedJob.status === JobStatus.IN_PROGRESS ? 'text-emerald-400' : 
+                              selectedJob.status === JobStatus.EN_ROUTE ? 'text-blue-400' : 'text-slate-200'
+                          }`}>{selectedJob.status}</span>
+                      </div>
+                      <div className="bg-slate-900 p-2 rounded border border-slate-700">
+                          <span className="block text-slate-500 mb-0.5">Skill Level</span>
+                          <span className="text-white">{selectedJob.requiredSkillLevel}</span>
+                      </div>
+                  </div>
+                  
+                  {/* Assignment Actions */}
+                  {selectedJob.status !== JobStatus.COMPLETED && (
+                      <div className="pt-2 border-t border-slate-700">
+                          <label className="block text-xs font-bold text-slate-400 mb-2">Re-Assign Technician</label>
+                          <div className="grid grid-cols-3 gap-1">
+                              {technicians.filter(t => t.isAvailable).map(t => (
+                                  <button 
+                                    key={t.id}
+                                    disabled={t.id === selectedJob.techId}
+                                    onClick={() => handleAssign(t.id)}
+                                    className={`text-[10px] p-1 rounded border transition truncate ${
+                                        t.id === selectedJob.techId 
+                                        ? 'bg-indigo-900 text-indigo-300 border-indigo-700' 
+                                        : 'bg-slate-700 text-slate-300 border-slate-600 hover:bg-slate-600'
+                                    }`}
+                                  >
+                                      {t.name.split(' ')[0]}
+                                  </button>
+                              ))}
+                          </div>
+                      </div>
+                  )}
+              </div>
+          </div>
       )}
     </div>
   );

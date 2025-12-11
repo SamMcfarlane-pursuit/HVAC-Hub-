@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Activity, Map, Package, Wrench, Menu } from 'lucide-react';
+import { LayoutDashboard, Activity, Map, Package, Wrench, Menu, PieChart } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -51,6 +52,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         <nav className="p-4 space-y-2">
           <NavItem to="/" icon={LayoutDashboard} label="Dashboard" />
+          <NavItem to="/market" icon={PieChart} label="Market Intelligence" />
           <NavItem to="/triage" icon={Activity} label="Smart Triage AI" />
           <NavItem to="/routing" icon={Map} label="Live Routing" />
           <NavItem to="/supply" icon={Package} label="Supply Chain" />

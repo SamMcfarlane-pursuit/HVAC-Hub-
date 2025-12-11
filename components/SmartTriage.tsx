@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Camera, Upload, AlertTriangle, CheckCircle, Activity, FileText } from 'lucide-react';
+import { Camera, Upload, AlertTriangle, CheckCircle, Activity, FileText, SlidersHorizontal } from 'lucide-react';
 import { analyzeHVACIssue } from '../services/geminiService';
 import { TriageResult, TechLevel } from '../types';
 
@@ -8,6 +8,7 @@ export const SmartTriage: React.FC = () => {
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<TriageResult | null>(null);
+  const [focusArea, setFocusArea] = useState<string | null>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -26,7 +27,7 @@ export const SmartTriage: React.FC = () => {
     setResult(null);
     try {
       // Pass image string directly (service handles base64 stripping)
-      const data = await analyzeHVACIssue(description, image || undefined);
+      const data = await analyzeHVACIssue(description, image || undefined, focusArea || undefined);
       setResult(data);
     } catch (err) {
       console.error(err);
@@ -34,6 +35,13 @@ export const SmartTriage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const FOCUS_OPTIONS = [
+      { id: 'Electrical', label: 'Electrical' },
+      { id: 'Mechanical Wear', label: 'Component Wear' },
+      { id: 'Refrigerant', label: 'Refrigerant' },
+      { id: 'Airflow', label: 'Airflow/Ducts' }
+  ];
 
   return (
     <div className="h-full flex flex-col space-y-6 p-6 overflow-y-auto">
@@ -46,13 +54,36 @@ export const SmartTriage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
             <textarea
-              className="w-full bg-slate-900 text-white border border-slate-700 rounded-lg p-3 h-32 focus:ring-2 focus:ring-emerald-500 outline-none"
+              className="w-full bg-slate-900 text-white border border-slate-700 rounded-lg p-3 h-32 focus:ring-2 focus:ring-emerald-500 outline-none placeholder-slate-500"
               placeholder="Describe the issue (e.g., 'Compressor short cycling, error E4 on thermostat')..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
             
-            <div className="flex items-center space-x-4">
+            {/* Refinement Options */}
+            <div className="space-y-2">
+                <div className="flex items-center text-slate-400 text-xs font-bold uppercase tracking-wider">
+                    <SlidersHorizontal className="w-3 h-3 mr-1" /> Refine Analysis Focus
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    {FOCUS_OPTIONS.map((opt) => (
+                        <button
+                            key={opt.id}
+                            onClick={() => setFocusArea(focusArea === opt.id ? null : opt.id)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold border transition flex items-center ${
+                                focusArea === opt.id
+                                ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-900/20'
+                                : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-200'
+                            }`}
+                        >
+                            {opt.label}
+                            {focusArea === opt.id && <CheckCircle className="w-3 h-3 ml-1" />}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div className="flex items-center space-x-4 pt-2">
               <label className="flex-1 cursor-pointer bg-slate-700 hover:bg-slate-600 transition p-3 rounded-lg flex items-center justify-center border border-slate-600 border-dashed">
                 <Camera className="w-5 h-5 text-slate-300 mr-2" />
                 <span className="text-sm text-slate-300">Upload Photo</span>
@@ -68,7 +99,7 @@ export const SmartTriage: React.FC = () => {
               </button>
             </div>
             {image && (
-              <div className="mt-2 relative group">
+              <div className="mt-2 relative group w-fit">
                 <img src={image} alt="Issue context" className="h-32 w-auto rounded-lg border border-slate-600" />
                 <button onClick={() => setImage(null)} className="absolute top-1 left-1 bg-red-500 text-white rounded-full p-1 text-xs opacity-0 group-hover:opacity-100 transition">✕</button>
               </div>
@@ -88,13 +119,17 @@ export const SmartTriage: React.FC = () => {
                 <div className="w-8 h-8 border-4 border-emerald-400 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
                 <p>Processing visual & text data...</p>
                 <p className="text-xs text-slate-500 mt-2">Checking Knowledge Base...</p>
+                {focusArea && <p className="text-xs text-indigo-400 mt-1">Focusing on {focusArea}...</p>}
               </div>
             )}
 
             {result && (
               <div className="space-y-4 animate-fadeIn">
                 <div className="flex justify-between items-start">
-                    <h3 className="text-xl font-bold text-white">{result.diagnosis}</h3>
+                    <div>
+                        <h3 className="text-xl font-bold text-white">{result.diagnosis}</h3>
+                        {focusArea && <span className="text-xs text-indigo-400 italic">Focused on {focusArea}</span>}
+                    </div>
                     <span className={`px-2 py-1 rounded text-xs font-bold 
                         ${result.confidence > 80 ? 'bg-emerald-900 text-emerald-300' : 'bg-amber-900 text-amber-300'}`}>
                         {result.confidence}% Confidence

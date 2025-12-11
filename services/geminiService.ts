@@ -5,14 +5,21 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const analyzeHVACIssue = async (
   description: string,
-  imageData?: string
+  imageData?: string,
+  focusArea?: string
 ): Promise<TriageResult> => {
   try {
     const model = "gemini-2.5-flash";
     
+    let systemInstruction = `You are an expert HVAC Technician AI Triage system. Analyze the following issue description and/or image. 
+    Provide a structured diagnosis including likely cause, confidence level (0-100), required technician skill level (Apprentice, Journeyman, Master), recommended parts (generic names), estimated repair hours, and any notes related to NYC "Local Law 97" compliance if relevant (energy efficiency/refrigerant logging).`;
+
+    if (focusArea) {
+        systemInstruction += `\n\nIMPORTANT: Focus your analysis specifically on potential '${focusArea}' issues. Prioritize hypotheses related to this area over others.`;
+    }
+    
     // Construct parts
-    const parts: any[] = [{ text: `You are an expert HVAC Technician AI Triage system. Analyze the following issue description and/or image. 
-    Provide a structured diagnosis including likely cause, confidence level (0-100), required technician skill level (Apprentice, Journeyman, Master), recommended parts (generic names), estimated repair hours, and any notes related to NYC "Local Law 97" compliance if relevant (energy efficiency/refrigerant logging).` }];
+    const parts: any[] = [{ text: systemInstruction }];
 
     if (imageData) {
         // imageData is expected to be a base64 string without the prefix for the API, 
