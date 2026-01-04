@@ -9,19 +9,31 @@ import { SupplyChain } from './components/SupplyChain';
 import { AssetSharing } from './components/AssetSharing';
 import { MarketIntelligence } from './components/MarketIntelligence';
 
+import { LoginPage } from './components/LoginPage';
+import { ProtectedRoute } from './components/ProtectedRoute';
+
 const App: React.FC = () => {
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/market" element={<MarketIntelligence />} />
-        <Route path="/triage" element={<SmartTriage />} />
-        <Route path="/routing" element={<JobMap />} />
-        <Route path="/supply" element={<SupplyChain />} />
-        <Route path="/assets" element={<AssetSharing />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Layout>
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+
+      {/* Protected Routes */}
+      <Route path="/*" element={
+        <ProtectedRoute>
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/market" element={<MarketIntelligence />} />
+              <Route path="/triage" element={<SmartTriage />} />
+              <Route path="/routing" element={<JobMap />} />
+              <Route path="/supply" element={<SupplyChain />} />
+              <Route path="/assets" element={<AssetSharing />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Layout>
+        </ProtectedRoute>
+      } />
+    </Routes>
   );
 };
 

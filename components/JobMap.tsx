@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Navigation, Truck, Plus, X, Briefcase, Clock, User, AlertTriangle, Wrench, Wand2, ChevronRight, Radio, ShieldAlert, Users, Power, Map as MapIcon, MousePointer2, Check, Layers } from 'lucide-react';
+import { MapPin, Navigation, Truck, Plus, X, Briefcase, Clock, User, AlertTriangle, Wrench, Wand2, ChevronRight, Radio, ShieldAlert, Users, Power, Map as MapIcon, MousePointer2, Check, Layers, Loader2 } from 'lucide-react';
 import { JobStatus, TechLevel, Job, Technician } from '../types';
 
 // API Configuration
@@ -155,29 +155,99 @@ export const JobMap: React.FC = () => {
         fetchData();
     }, []);
 
-    // Simulate Live GPS Updates
+    // Intelligent GPS Simulation
     useEffect(() => {
         const interval = setInterval(() => {
-            setTechnicians(prevTechs => prevTechs.map(tech => {
-                if (!tech.isAvailable) return tech;
+            setTechnicians(prevTechs => {
+                return prevTechs.map(tech => {
+                    if (!tech.isAvailable) return tech;
 
-                const latDelta = (Math.random() - 0.5) * 0.0002;
-                const lngDelta = (Math.random() - 0.5) * 0.0002;
+                    // Find active job for this tech
+                    // Note: In a real app we'd likely store currentJobId on the tech, 
+                    // but here we check the jobs list for the source of truth
+                    const activeJob = jobs.find(j => j.techId === tech.id && j.status === JobStatus.EN_ROUTE);
 
-                return {
-                    ...tech,
-                    location: {
-                        ...tech.location,
-                        lat: tech.location.lat + latDelta,
-                        lng: tech.location.lng + lngDelta,
-                        label: tech.location.label
+                    // 1. IDLE / PATROL MODE (No active travel job)
+                    if (!activeJob) {
+                        const latDelta = (Math.random() - 0.5) * 0.0001; // Tiny jitter
+                        const lngDelta = (Math.random() - 0.5) * 0.0001;
+                        return {
+                            ...tech,
+                            location: { ...tech.location, lat: tech.location.lat + latDelta, lng: tech.location.lng + lngDelta }
+                        };
                     }
-                };
-            }));
+
+                    // 2. VECTOR TRAVEL MODE
+                    const targetLat = activeJob.location.lat;
+                    const targetLng = activeJob.location.lng;
+                    const currentLat = tech.location.lat;
+                    const currentLng = tech.location.lng;
+
+                    // Calculate vector
+                    const dLat = targetLat - currentLat;
+                    const dLng = targetLng - currentLng;
+                    const distance = Math.sqrt(dLat * dLat + dLng * dLng);
+
+                    // Speed factor (simulated speed)
+                    // We want them to close the gap noticeably but realistically
+                    // ~0.005 degrees per interval is fast enough for demo
+                    const speed = 0.0015;
+
+                    let newLat = currentLat;
+                    let newLng = currentLng;
+
+                    // 3. ARRIVAL CHECK
+                    // If very close, snap to target and update status
+                    if (distance < 0.002) {
+                        newLat = targetLat;
+                        newLng = targetLng;
+
+                        // Trigger arrival (Optimistic + API)
+                        // We use a timeout to avoid strict mode rendering causing double-triggers/state loops in some dev envs,
+                        // but mainly to decouple the render cycle from the status change slightly.
+                        setTimeout(() => {
+                            handleArrival(activeJob.id, tech.id);
+                        }, 0);
+
+                    } else {
+                        // Move along vector
+                        const ratio = speed / distance;
+                        newLat += dLat * ratio;
+                        newLng += dLng * ratio;
+                    }
+
+                    return {
+                        ...tech,
+                        location: { ...tech.location, lat: newLat, lng: newLng }
+                    };
+                });
+            });
         }, 1000);
 
         return () => clearInterval(interval);
-    }, []);
+    }, [jobs]); // Depend on jobs to know destinations
+
+    const handleArrival = async (jobId: string, techId: string) => {
+        // Prevent double updates if already processed
+        // (State check inside setJobs would be safer but this is a quick demo logic)
+
+        // Optimistic Update
+        setJobs(prev => prev.map(j =>
+            j.id === jobId && j.status === JobStatus.EN_ROUTE
+                ? { ...j, status: JobStatus.IN_PROGRESS }
+                : j
+        ));
+
+        try {
+            await fetch(`${API_BASE}/api/jobs`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: jobId, status: 'In Progress' })
+            });
+        } catch (err) {
+            console.error("Arrival update failed", err);
+        }
+    };
 
     const handleOpenBookJob = () => {
         setNewJobLocation(null);
@@ -403,26 +473,70 @@ export const JobMap: React.FC = () => {
         }, 1200);
     };
 
-    const handleAssign = (techId: string) => {
+    const handleAssign = async (techId: string) => {
         if (!selectedJob) return;
 
+        const updatedStatus = JobStatus.EN_ROUTE;
+
+        // Optimistic UI update
         const updatedJobs = jobs.map(j =>
             j.id === selectedJob.id
-                ? { ...j, techId, status: JobStatus.EN_ROUTE }
+                ? { ...j, techId, status: updatedStatus }
                 : j
         );
-
         setJobs(updatedJobs);
 
         // Update local selectedJob state
         const updatedSelectedJob = updatedJobs.find(j => j.id === selectedJob.id) || null;
         setSelectedJob(updatedSelectedJob);
+
+        try {
+            const response = await fetch(`${API_BASE}/api/jobs`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: selectedJob.id,
+                    techId,
+                    status: 'En Route' // Send string as expected by backend
+                })
+            });
+
+            if (!response.ok) throw new Error('Failed to update job assignment');
+        } catch (err) {
+            console.error('Assign job error:', err);
+            // Revert optimistic update on failure (simplified)
+            setApiError('Failed to save assignment');
+        }
     };
 
-    const toggleTechAvailability = (techId: string) => {
+    const toggleTechAvailability = async (techId: string) => {
+        const tech = technicians.find(t => t.id === techId);
+        if (!tech) return;
+
+        // Optimistic update
         setTechnicians(prev => prev.map(t =>
             t.id === techId ? { ...t, isAvailable: !t.isAvailable } : t
         ));
+
+        try {
+            const response = await fetch(`${API_BASE}/api/technicians`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: techId,
+                    isAvailable: !tech.isAvailable
+                })
+            });
+
+            if (!response.ok) throw new Error('Failed to update technician availability');
+        } catch (err) {
+            console.error('Toggle availability error:', err);
+            setApiError('Failed to save availability status');
+            // Revert
+            setTechnicians(prev => prev.map(t =>
+                t.id === techId ? { ...t, isAvailable: tech.isAvailable } : t
+            ));
+        }
     };
 
     const getStatusColor = (status: JobStatus) => {
@@ -436,6 +550,14 @@ export const JobMap: React.FC = () => {
 
     return (
         <div className="h-full flex flex-col p-6 space-y-4 relative">
+            {/* Error Banner */}
+            {apiError && (
+                <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg flex items-center mb-2 animate-pulse">
+                    <AlertTriangle className="w-4 h-4 mr-2" />
+                    <span className="text-sm font-bold">{apiError}</span>
+                    <button onClick={() => setApiError(null)} className="ml-auto hover:text-white"><X className="w-4 h-4" /></button>
+                </div>
+            )}
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 md:gap-0">
                 <h2 className="text-2xl font-bold text-white flex items-center">
                     <Navigation className="mr-2 text-blue-400" /> Dispatch & Routing (NYC)
@@ -489,34 +611,70 @@ export const JobMap: React.FC = () => {
                     onMouseUp={handleMouseUp}
                     onMouseLeave={handleMouseUp}
                 >
-                    {/* NYC Map Background - Abstract */}
-                    <div className="absolute inset-0 bg-slate-900 pointer-events-none">
-                        {/* Grid Lines */}
-                        <div className="w-full h-full opacity-20" style={{ backgroundImage: 'linear-gradient(#475569 1px, transparent 1px), linear-gradient(90deg, #475569 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
-                        {/* Abstract Water Bodies */}
-                        <div className="absolute top-0 bottom-0 left-[18%] w-[12%] bg-blue-950/50 skew-x-12 transform -translate-x-10 border-x border-blue-900/30"></div>
-                        <div className="absolute top-0 bottom-0 right-[28%] w-[10%] bg-blue-950/50 skew-x-6 border-x border-blue-900/30"></div>
+                    {/* TACTICAL MAP BACKGROUND */}
+                    <div className="absolute inset-0 bg-slate-950 pointer-events-none overflow-hidden">
+
+                        {/* 1. Base Grid (City Blocks) */}
+                        <div className="absolute inset-0 opacity-20"
+                            style={{
+                                backgroundImage: `
+                                    linear-gradient(rgba(56, 189, 248, 0.1) 1px, transparent 1px), 
+                                    linear-gradient(90deg, rgba(56, 189, 248, 0.1) 1px, transparent 1px)
+                                 `,
+                                backgroundSize: '40px 40px'
+                            }}>
+                        </div>
+
+                        {/* 2. Secondary Fine Grid */}
+                        <div className="absolute inset-0 opacity-10"
+                            style={{
+                                backgroundImage: `
+                                    linear-gradient(rgba(56, 189, 248, 0.1) 0.5px, transparent 0.5px), 
+                                    linear-gradient(90deg, rgba(56, 189, 248, 0.1) 0.5px, transparent 0.5px)
+                                 `,
+                                backgroundSize: '10px 10px'
+                            }}>
+                        </div>
+
+                        {/* 3. Abstract City Zones (Darker Blocks) */}
+                        {/* Downtown Hub */}
+                        <div className="absolute top-[60%] left-[40%] w-[15%] h-[20%] bg-slate-900/80 border border-slate-800/50 backdrop-blur-sm"></div>
+                        <div className="absolute top-[20%] left-[60%] w-[12%] h-[15%] bg-slate-900/80 border border-slate-800/50 backdrop-blur-sm"></div>
+                        <div className="absolute top-[40%] left-[20%] w-[10%] h-[25%] bg-slate-900/80 border border-slate-800/50 backdrop-blur-sm"></div>
+
+                        {/* 4. Water Bodies (Geometric/Cyberpunk) */}
+                        {/* Hudson River Abstract */}
+                        <div className="absolute top-0 bottom-0 left-[25%] w-[8%] bg-cyan-950/20 skew-x-12 border-x border-cyan-900/20"></div>
+                        {/* East River Abstract */}
+                        <div className="absolute top-0 bottom-0 right-[30%] w-[6%] bg-cyan-950/20 skew-x-[-12deg] border-x border-cyan-900/20"></div>
 
                         {/* STRATEGIC ZONES OVERLAY */}
                         {showStrategicZones && (
                             <>
-                                {/* Zone 1: NYC Commercial (Midtown/Downtown) */}
-                                <div className="absolute top-[35%] left-[55%] w-[25%] h-[35%] border-2 border-emerald-500/50 bg-emerald-500/10 rounded-lg flex items-center justify-center animate-fadeIn">
-                                    <span className="text-emerald-400 font-bold text-xs uppercase bg-slate-900/80 px-2 py-1 rounded backdrop-blur">Zone 1: NYC Commercial</span>
+                                {/* Zone 1: NYC Commercial */}
+                                <div className="absolute top-[35%] left-[55%] w-[25%] h-[35%] border-2 border-emerald-500/30 bg-emerald-500/5 rounded-lg flex items-center justify-center animate-pulse-slow">
+                                    <span className="text-emerald-400 font-mono font-bold text-[10px] uppercase bg-slate-950/90 px-2 py-1 rounded border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                                        Sector A: Midtown
+                                    </span>
                                 </div>
-                                {/* Zone 2: NJ Residential (Jersey City/Hoboken) */}
-                                <div className="absolute top-[40%] left-[5%] w-[20%] h-[40%] border-2 border-purple-500/50 bg-purple-500/10 rounded-lg flex items-center justify-center animate-fadeIn">
-                                    <span className="text-purple-400 font-bold text-xs uppercase bg-slate-900/80 px-2 py-1 rounded backdrop-blur">Zone 2: NJ Residential</span>
+                                {/* Zone 2: NJ Hub */}
+                                <div className="absolute top-[40%] left-[5%] w-[20%] h-[40%] border-2 border-indigo-500/30 bg-indigo-500/5 rounded-lg flex items-center justify-center animate-pulse-slow">
+                                    <span className="text-indigo-400 font-mono font-bold text-[10px] uppercase bg-slate-950/90 px-2 py-1 rounded border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+                                        Sector B: Jersey Logistics
+                                    </span>
                                 </div>
                             </>
                         )}
 
-                        {/* Landmarks Labels */}
+                        {/* 5. Landmarks (Digital Labels) */}
                         {LANDMARKS.map((mark, i) => {
                             const pos = getProjectedPosition(mark.lat, mark.lng);
                             return (
-                                <div key={i} className="absolute text-slate-700 text-[10px] font-bold uppercase tracking-widest transform -translate-x-1/2 -translate-y-1/2 opacity-60" style={{ top: `${pos.top}%`, left: `${pos.left}%` }}>
-                                    {mark.label}
+                                <div key={i} className="absolute flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2 group" style={{ top: `${pos.top}%`, left: `${pos.left}%` }}>
+                                    <div className="w-1 h-1 bg-slate-500 rounded-full mb-1"></div>
+                                    <div className="text-slate-600 text-[9px] font-mono tracking-widest uppercase opacity-40 group-hover:opacity-100 group-hover:text-cyan-400 transition-all duration-300">
+                                        {mark.label}
+                                    </div>
                                 </div>
                             )
                         })}
@@ -564,25 +722,39 @@ export const JobMap: React.FC = () => {
                             }
 
                             return (
-                                <g key={`route-${tech.id}`} className="transition-opacity duration-300" style={{ opacity: isDimmed ? 0.1 : 1 }}>
+                                <g key={`route-${tech.id}`} className="transition-opacity duration-300" style={{ opacity: isDimmed ? 0.05 : 1 }}>
                                     <defs>
-                                        <linearGradient id={`grad-${tech.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                                            <stop offset="0%" stopColor={techColor} stopOpacity="0.8" />
-                                            <stop offset="100%" stopColor={techColor} stopOpacity="0.2" />
-                                        </linearGradient>
+                                        <filter id={`glow-${tech.id}`} x="-20%" y="-20%" width="140%" height="140%">
+                                            <feGaussianBlur stdDeviation="2" result="blur" />
+                                            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                        </filter>
                                     </defs>
+
+                                    {/* 1. Underlying Glow Path */}
                                     <path
                                         d={pathData}
                                         stroke={techColor}
-                                        strokeWidth={isHovered ? "0.8" : "0.4"}
-                                        strokeDasharray={isHovered ? "4,2" : "2,2"}
+                                        strokeWidth={isHovered ? "2" : "1"}
+                                        strokeOpacity="0.3"
                                         fill="none"
-                                        className="animate-[dash_20s_linear_infinite]"
+                                        style={{ filter: `url(#glow-${tech.id})` }}
+                                        vectorEffect="non-scaling-stroke"
+                                    />
+
+                                    {/* 2. Core Bright Path */}
+                                    <path
+                                        d={pathData}
+                                        stroke={techColor}
+                                        strokeWidth={isHovered ? "0.8" : "0.5"}
+                                        strokeDasharray={isHovered ? "4,4" : "0"} // Solid line unless hovered for precision effect
+                                        fill="none"
+                                        className={isHovered ? "animate-[dash_1s_linear_infinite]" : ""}
                                         style={{ strokeLinecap: 'round', strokeLinejoin: 'round' }}
                                         vectorEffect="non-scaling-stroke"
                                     />
-                                    {/* Start Circle */}
-                                    <circle cx={techPos.left} cy={techPos.top} r="0.6" fill={techColor} opacity="0.5" />
+
+                                    {/* Start Node */}
+                                    <circle cx={techPos.left} cy={techPos.top} r="0.8" fill={techColor} className="animate-pulse" />
                                 </g>
                             );
                         })}
@@ -639,6 +811,22 @@ export const JobMap: React.FC = () => {
                         const techColor = TECH_COLORS[idx % TECH_COLORS.length];
                         const isDimmed = (hoveredTechId && hoveredTechId !== tech.id) || isLocationMode;
 
+                        // LIVE STATUS LOGIC
+                        const activeJob = jobs.find(j => j.techId === tech.id && j.status === JobStatus.EN_ROUTE);
+                        let statusText = "Idle";
+                        let etaText = "";
+                        let isMoving = false;
+
+                        if (activeJob) {
+                            isMoving = true;
+                            statusText = "En Route";
+                            const dist = calculateDistance(tech.location.lat, tech.location.lng, activeJob.location.lat, activeJob.location.lng);
+                            const minutes = Math.ceil((dist / AVG_SPEED_MPH) * 60);
+                            etaText = `ETA: ${minutes} min`;
+                        } else if (jobs.some(j => j.techId === tech.id && j.status === JobStatus.IN_PROGRESS)) {
+                            statusText = "On Site";
+                        }
+
                         return (
                             <div
                                 key={tech.id}
@@ -648,18 +836,20 @@ export const JobMap: React.FC = () => {
                                 style={{ top: `${pos.top}%`, left: `${pos.left}%` }}
                             >
                                 <div className="relative group">
-                                    <div className="absolute inset-0 rounded-full blur-sm opacity-50" style={{ backgroundColor: isAvailable ? techColor : '#475569' }}></div>
+                                    <div className={`absolute inset-0 rounded-full blur-sm opacity-50 ${isMoving ? 'animate-pulse' : ''}`} style={{ backgroundColor: isAvailable ? techColor : '#475569' }}></div>
                                     <div className="relative flex items-center justify-center w-9 h-9 rounded-full border-2 shadow-[0_0_15px_rgba(0,0,0,0.5)] transition-transform hover:scale-110" style={{
                                         backgroundColor: isAvailable ? techColor : '#475569',
                                         borderColor: isAvailable ? '#fff' : '#94a3b8'
                                     }}>
-                                        <Truck className="w-5 h-5 text-white" />
+                                        <Truck className={`w-5 h-5 text-white ${isMoving ? 'animate-bounce-slight' : ''}`} />
                                         {isAvailable && <div className="absolute -inset-1 rounded-full animate-ping opacity-20" style={{ backgroundColor: techColor }}></div>}
                                     </div>
                                     {/* Label */}
-                                    <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white text-[10px] px-2 py-1 rounded border border-slate-700 whitespace-nowrap opacity-0 group-hover:opacity-100 transition shadow-lg font-bold flex flex-col items-center">
+                                    <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white text-[10px] px-2 py-1 rounded border border-slate-700 whitespace-nowrap opacity-0 group-hover:opacity-100 transition shadow-lg font-bold flex flex-col items-center z-50 pointer-events-none">
                                         <span>{tech.name}</span>
-                                        {!isAvailable && <span className="text-slate-400 font-normal">Off-Duty</span>}
+                                        <span className={`font-normal ${isMoving ? 'text-emerald-400' : 'text-slate-400'}`}>
+                                            {statusText} {etaText && `• ${etaText}`}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -766,8 +956,8 @@ export const JobMap: React.FC = () => {
                             >
                                 {/* Status Bar */}
                                 <div className={`absolute left-0 top-0 bottom-0 w-1 ${job.status === JobStatus.IN_PROGRESS ? 'bg-emerald-500' :
-                                        job.status === JobStatus.EN_ROUTE ? 'bg-blue-500' :
-                                            'bg-red-500'
+                                    job.status === JobStatus.EN_ROUTE ? 'bg-blue-500' :
+                                        'bg-red-500'
                                     }`}></div>
 
                                 <div className="pl-3">
@@ -790,8 +980,8 @@ export const JobMap: React.FC = () => {
                                         )}
 
                                         <span className={`text-[10px] px-1.5 py-0.5 rounded border ${job.status === JobStatus.IN_PROGRESS ? 'bg-emerald-900/20 text-emerald-400 border-emerald-900/50' :
-                                                job.status === JobStatus.EN_ROUTE ? 'bg-blue-900/20 text-blue-400 border-blue-900/50' :
-                                                    'bg-slate-700 text-slate-400 border-slate-600'
+                                            job.status === JobStatus.EN_ROUTE ? 'bg-blue-900/20 text-blue-400 border-blue-900/50' :
+                                                'bg-slate-700 text-slate-400 border-slate-600'
                                             }`}>
                                             {job.status}
                                         </span>
@@ -920,7 +1110,7 @@ export const JobMap: React.FC = () => {
                             <div className="bg-slate-900 p-2 rounded border border-slate-700">
                                 <span className="block text-slate-500 mb-0.5">Status</span>
                                 <span className={`font-bold ${selectedJob.status === JobStatus.IN_PROGRESS ? 'text-emerald-400' :
-                                        selectedJob.status === JobStatus.EN_ROUTE ? 'text-blue-400' : 'text-slate-200'
+                                    selectedJob.status === JobStatus.EN_ROUTE ? 'text-blue-400' : 'text-slate-200'
                                     }`}>{selectedJob.status}</span>
                             </div>
                             <div className="bg-slate-900 p-2 rounded border border-slate-700">
@@ -940,8 +1130,8 @@ export const JobMap: React.FC = () => {
                                             disabled={t.id === selectedJob.techId}
                                             onClick={() => handleAssign(t.id)}
                                             className={`text-[10px] p-1 rounded border transition truncate ${t.id === selectedJob.techId
-                                                    ? 'bg-indigo-900 text-indigo-300 border-indigo-700'
-                                                    : 'bg-slate-700 text-slate-300 border-slate-600 hover:bg-slate-600'
+                                                ? 'bg-indigo-900 text-indigo-300 border-indigo-700'
+                                                : 'bg-slate-700 text-slate-300 border-slate-600 hover:bg-slate-600'
                                                 }`}
                                         >
                                             {t.name.split(' ')[0]}
