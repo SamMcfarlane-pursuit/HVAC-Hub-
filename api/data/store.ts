@@ -1,7 +1,6 @@
 // In-memory data store for HVAC Hub
 // Persists during serverless warm starts
-
-import { TechLevel, JobStatus } from '../../types';
+// Self-contained - no external imports
 
 export interface Technician {
     id: string;
