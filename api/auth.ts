@@ -42,7 +42,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     } catch (error: any) {
         if (error instanceof z.ZodError) {
-            return res.status(400).json({ error: 'Validation Error', details: error.errors });
+            return res.status(400).json({ error: 'Validation Error', details: error.issues });
         }
         console.error('Auth error:', error);
         return res.status(500).json({ error: 'Internal Server Error' });

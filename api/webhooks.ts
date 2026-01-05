@@ -1,5 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { jobs, technicians, parts } from '../data/store';
 
 /**
  * Webhook Receiver Endpoint
