@@ -41,6 +41,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 { name: 'Fri', value: Math.round(utilizationRate) || 92 }, // Use current calc for Friday
             ];
 
+            // 5. Live Activity Feed (Synthesized from Store)
+            const recentActivity = [
+                ...jobs.slice(0, 3).map(j => ({
+                    id: `job-${j.id}`,
+                    type: 'job',
+                    message: `Job #${j.id} at ${j.clientName} is ${j.status}`,
+                    timestamp: j.timestamp,
+                    status: j.status === 'Completed' ? 'success' : 'info'
+                })),
+                ...parts.filter(p => p.stock < 5).map(p => ({
+                    id: `stock-${p.id}`,
+                    type: 'alert',
+                    message: `Low Stock Warning: ${p.name} (${p.stock} units remaining)`,
+                    timestamp: 'Now',
+                    status: p.stock < 3 ? 'critical' : 'warning'
+                }))
+            ].slice(0, 6); // Top 6 items
+
             return res.status(200).json({
                 utilization: {
                     rate: utilizationRate.toFixed(1),
@@ -57,7 +75,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 alerts: {
                     count: lowStockCount + unassignedJobsCount,
                     details: `${lowStockCount} Low Stock, ${unassignedJobsCount} Unassigned`
-                }
+                },
+                recentActivity
             });
         }
 

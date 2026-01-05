@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Wrench, ShieldCheck, Calendar, MapPin, User, Loader2 } from 'lucide-react';
+import { Wrench, ShieldCheck, Calendar, MapPin, User, Loader2, Star, Filter, Search, TrendingUp, Clock, Banknote, BadgeCheck } from 'lucide-react';
 import { Asset } from '../types';
 import { PaymentModal } from './PaymentModal';
+
+type FilterType = 'ALL' | 'HEAVY' | 'TOOLS' | 'DIAGNOSTIC';
 
 export const AssetSharing: React.FC = () => {
     const [assets, setAssets] = useState<Asset[]>([]);
     const [loading, setLoading] = useState(true);
+    const [activeFilter, setActiveFilter] = useState<FilterType>('ALL');
+    const [searchTerm, setSearchTerm] = useState('');
 
     // Payment State
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -59,73 +63,179 @@ export const AssetSharing: React.FC = () => {
         }
     };
 
+    // Filter Logic
+    const filteredAssets = assets.filter(asset => {
+        const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            asset.ownerName.toLowerCase().includes(searchTerm.toLowerCase());
+
+        if (!matchesSearch) return false;
+
+        if (activeFilter === 'ALL') return true;
+        // Simple heuristic for demo categories since data might be loose
+        if (activeFilter === 'HEAVY') return asset.category.includes('Machinery') || asset.category.includes('Heavy');
+        if (activeFilter === 'TOOLS') return asset.category.includes('Tool') || asset.category.includes('Drill');
+        if (activeFilter === 'DIAGNOSTIC') return asset.category.includes('Meter') || asset.category.includes('Camera');
+        return true;
+    });
+
+    // Mock Stats
+    const activeRentals = assets.filter(a => a.status === 'Rented').length;
+    const availableAssets = assets.filter(a => a.status === 'Available').length;
+
     if (loading) {
         return (
-            <div className="h-full flex items-center justify-center">
-                <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+            <div className="h-full flex items-center justify-center flex-col">
+                <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
+                <p className="text-slate-400 font-medium">Scanning Asset Network...</p>
             </div>
         );
     }
 
     return (
-        <div className="h-full flex flex-col p-6 space-y-6">
-            <div>
-                <h2 className="text-2xl font-bold text-white flex items-center">
-                    <Wrench className="mr-2 text-indigo-400" /> Asset Sharing Network
-                </h2>
-                <p className="text-slate-400 text-sm">Rent high-CAPEX equipment from nearby contractors. Insurance included.</p>
+        <div className="h-full flex flex-col p-6 space-y-6 overflow-y-auto">
+            {/* HEADLINE */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 className="text-2xl font-bold text-white flex items-center">
+                        <Wrench className="mr-2 text-indigo-400" /> Equipment Exchange
+                    </h2>
+                    <p className="text-slate-400 text-sm">Peer-to-peer heavy equipment rental network.</p>
+                </div>
+                <div className="relative w-full md:w-96 group">
+                    <Search className="absolute left-3 top-3 w-5 h-5 text-slate-500 group-focus-within:text-indigo-400 transition" />
+                    <input
+                        type="text"
+                        placeholder="Find equipment or owners..."
+                        className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2.5 pl-10 pr-4 text-white focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all focus:border-indigo-500 shadow-inner"
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                    />
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {assets.map((asset) => (
-                    <div key={asset.id} className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden flex flex-col group hover:border-indigo-500 transition duration-300">
-                        <div className="relative h-48 bg-slate-900">
-                            <img src={asset.imageUrl} alt={asset.name} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition" />
-                            <div className="absolute top-2 right-2">
-                                <span className={`px-2 py-1 rounded text-xs font-bold uppercase tracking-wide ${asset.status === 'Available' ? 'bg-emerald-500 text-white' : 'bg-slate-600 text-slate-300'
+            {/* NETWORK STATS */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex items-center shadow-lg">
+                    <div className="p-3 bg-indigo-500/10 rounded-lg text-indigo-400 mr-4">
+                        <Clock className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <div className="text-slate-400 text-xs font-bold uppercase tracking-wider">Active Rentals</div>
+                        <div className="text-2xl font-black text-white">{activeRentals}</div>
+                    </div>
+                </div>
+                <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex items-center shadow-lg">
+                    <div className="p-3 bg-emerald-500/10 rounded-lg text-emerald-400 mr-4">
+                        <Banknote className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <div className="text-slate-400 text-xs font-bold uppercase tracking-wider">Est. Capex Savings</div>
+                        <div className="text-2xl font-black text-white">$14,250</div>
+                    </div>
+                </div>
+                <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex items-center shadow-lg">
+                    <div className="p-3 bg-amber-500/10 rounded-lg text-amber-400 mr-4">
+                        <TrendingUp className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <div className="text-slate-400 text-xs font-bold uppercase tracking-wider">Network Utilization</div>
+                        <div className="text-2xl font-black text-white">{Math.round((activeRentals / assets.length) * 100)}%</div>
+                    </div>
+                </div>
+            </div>
+
+            {/* FILTERS */}
+            <div className="flex flex-wrap gap-2 pb-2">
+                {(['ALL', 'HEAVY', 'TOOLS', 'DIAGNOSTIC'] as FilterType[]).map(type => (
+                    <button
+                        key={type}
+                        onClick={() => setActiveFilter(type)}
+                        className={`px-4 py-1.5 rounded-full text-xs font-bold transition flex items-center border ${activeFilter === type
+                                ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-500/20'
+                                : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-200'
+                            }`}
+                    >
+                        {type === 'ALL' && <Filter className="w-3 h-3 mr-1.5" />}
+                        {type}
+                    </button>
+                ))}
+            </div>
+
+            {/* ASSET GRID */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredAssets.map((asset) => (
+                    <div key={asset.id} className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden flex flex-col group hover:border-indigo-500 transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1">
+
+                        {/* IMAGE HEADER */}
+                        <div className="relative h-48 bg-slate-900 overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent opacity-60 z-10" />
+                            <img
+                                src={asset.imageUrl}
+                                alt={asset.name}
+                                className="w-full h-full object-cover group-hover:scale-105 transition duration-700"
+                            />
+
+                            {/* STATUS BADGE */}
+                            <div className="absolute top-3 right-3 z-20">
+                                <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wide border shadow-sm backdrop-blur-md ${asset.status === 'Available'
+                                        ? 'bg-emerald-500/90 text-white border-emerald-400'
+                                        : 'bg-slate-900/90 text-slate-400 border-slate-600'
                                     }`}>
-                                    {asset.status}
+                                    {asset.status === 'Available' ? 'Ready to Book' : 'Currently Rented'}
                                 </span>
+                            </div>
+
+                            {/* PRICE TAG */}
+                            <div className="absolute bottom-3 right-3 z-20 flex flex-col items-end">
+                                <span className="text-2xl font-black text-white text-shadow-lg">${asset.dailyRate}</span>
+                                <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Per Day</span>
                             </div>
                         </div>
 
-                        <div className="p-5 flex-1 flex flex-col">
-                            <div className="flex justify-between items-start mb-2">
-                                <div>
-                                    <h3 className="text-lg font-bold text-white group-hover:text-indigo-400 transition">{asset.name}</h3>
-                                    <p className="text-xs text-slate-400 uppercase">{asset.category}</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-xl font-bold text-white">${asset.dailyRate}</p>
-                                    <p className="text-xs text-slate-500">/day</p>
+                        {/* CONTENT */}
+                        <div className="p-5 flex-1 flex flex-col pt-4">
+                            <div className="mb-4">
+                                <h3 className="text-lg font-bold text-white group-hover:text-indigo-400 transition leading-tight mb-1">{asset.name}</h3>
+                                <div className="flex items-center text-xs text-slate-400">
+                                    <span className="bg-slate-700 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold mr-2">{asset.category}</span>
+                                    <MapPin className="w-3 h-3 mr-1" /> {asset.location}
                                 </div>
                             </div>
 
-                            <div className="space-y-2 mb-4">
-                                <div className="flex items-center text-sm text-slate-400">
-                                    <MapPin className="w-4 h-4 mr-2 text-slate-500" />
-                                    {asset.location}
-                                </div>
-                                <div className="flex items-center text-sm text-slate-400">
-                                    <User className="w-4 h-4 mr-2 text-slate-500" />
-                                    Owned by {asset.ownerName}
+                            <div className="bg-slate-900/50 rounded-lg p-3 mb-4 border border-slate-700/50">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center">
+                                        <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold text-xs mr-2">
+                                            {asset.ownerName.charAt(0)}
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-bold text-slate-200">{asset.ownerName}</span>
+                                            <span className="text-[10px] text-emerald-400 flex items-center">
+                                                <BadgeCheck className="w-3 h-3 mr-1" /> Verified Owner
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center bg-slate-800 px-1.5 py-0.5 rounded text-amber-400 border border-slate-700">
+                                        <Star className="w-3 h-3 mr-1 fill-current" />
+                                        <span className="text-xs font-bold">4.9</span>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="mt-auto pt-4 border-t border-slate-700 flex justify-between items-center">
-                                <div className="flex items-center text-emerald-400 text-xs">
-                                    <ShieldCheck className="w-4 h-4 mr-1" />
-                                    Insurance Included
+                            <div className="mt-auto flex items-center justify-between pt-2 border-t border-slate-700/50">
+                                <div className="flex items-center text-slate-500 text-[10px] font-medium">
+                                    <ShieldCheck className="w-3 h-3 mr-1 text-emerald-500" />
+                                    $50k Insurance
                                 </div>
                                 <button
                                     onClick={() => handleBookClick(asset)}
                                     disabled={asset.status !== 'Available'}
-                                    className={`px-4 py-2 rounded font-bold text-sm transition ${asset.status === 'Available'
-                                        ? 'bg-indigo-600 hover:bg-indigo-500 text-white'
-                                        : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                                    className={`px-4 py-2 rounded-lg font-bold text-xs transition uppercase tracking-wide ${asset.status === 'Available'
+                                            ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-900/20'
+                                            : 'bg-slate-700 text-slate-500 cursor-not-allowed'
                                         }`}
                                 >
-                                    {asset.status === 'Available' ? 'Book Now' : 'Rented'}
+                                    {asset.status === 'Available' ? 'Book Asset' : 'Unavailable'}
                                 </button>
                             </div>
                         </div>

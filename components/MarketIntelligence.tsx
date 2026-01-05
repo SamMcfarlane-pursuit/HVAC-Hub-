@@ -1,45 +1,107 @@
+import React, { useState, useEffect } from 'react';
+import { Target, TrendingUp, Map, ShieldAlert, PieChart, Users, Camera, ArrowRight, CheckSquare, Zap, BarChart3, Database, Globe, Server, Cpu, Loader2, Briefcase, Activity, AlertTriangle } from 'lucide-react';
 
-import React, { useState } from 'react';
-import { Target, TrendingUp, Map, ShieldAlert, PieChart, Users, Camera, ArrowRight, CheckSquare, Zap, BarChart3, Database, Globe, Server, Cpu } from 'lucide-react';
+interface AnalyticsData {
+  utilization: { rate: string; trend: { name: string; value: number }[] };
+  margin: { value: number; targetMet: boolean };
+  revenue: { totalRecurring: number; history: { name: string; oneTime: number; recurring: number }[] };
+  alerts: { count: number; details: string };
+}
 
 export const MarketIntelligence: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'plan' | 'financials' | 'sops' | 'tech'>('plan');
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        const res = await fetch('/api/analytics');
+        if (res.ok) {
+          const data = await res.json();
+          setAnalytics(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch analytics', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAnalytics();
+  }, []);
 
   return (
     <div className="h-full flex flex-col p-6 space-y-6 overflow-y-auto">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-white flex items-center">
-            <PieChart className="mr-2 text-indigo-400" /> Market Intelligence & Strategy
-          </h2>
-          <p className="text-slate-400 text-sm">Confidential Master Plan: Vertically Integrated HVAC Model</p>
+      {/* LIVE KPI DASHBOARD HEADER */}
+      <div className="bg-gradient-to-r from-indigo-900/30 via-slate-800 to-purple-900/30 p-5 rounded-xl border border-indigo-500/30 shadow-lg shadow-indigo-500/5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+          <div>
+            <h2 className="text-2xl font-bold text-white flex items-center">
+              <PieChart className="mr-2 text-indigo-400" /> Market Intelligence & Strategy
+            </h2>
+            <p className="text-slate-400 text-sm">Confidential Master Plan: Vertically Integrated HVAC Model</p>
+          </div>
+          <div className="flex items-center space-x-2 text-xs">
+            <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded font-bold">LIVE DATA</span>
+            <Activity className="w-4 h-4 text-emerald-400 animate-pulse" />
+          </div>
         </div>
-        <div className="flex space-x-2 bg-slate-900 p-1 rounded-lg border border-slate-700 overflow-x-auto">
-          <button 
-            onClick={() => setActiveTab('plan')}
-            className={`px-4 py-2 rounded text-sm font-bold transition whitespace-nowrap ${activeTab === 'plan' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
-          >
-            Strategic Plan
-          </button>
-          <button 
-            onClick={() => setActiveTab('financials')}
-            className={`px-4 py-2 rounded text-sm font-bold transition whitespace-nowrap ${activeTab === 'financials' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'}`}
-          >
-            Financial Targets
-          </button>
-          <button 
-            onClick={() => setActiveTab('sops')}
-            className={`px-4 py-2 rounded text-sm font-bold transition whitespace-nowrap ${activeTab === 'sops' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
-          >
-            Field SOPs
-          </button>
-          <button 
-            onClick={() => setActiveTab('tech')}
-            className={`px-4 py-2 rounded text-sm font-bold transition whitespace-nowrap ${activeTab === 'tech' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}`}
-          >
-            Tech Stack
-          </button>
-        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
+          </div>
+        ) : analytics && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-700">
+              <div className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Fleet Utilization</div>
+              <div className="text-2xl font-black text-white">{analytics.utilization.rate}%</div>
+            </div>
+            <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-700">
+              <div className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Gross Margin</div>
+              <div className="text-2xl font-black text-emerald-400">{analytics.margin.value}%</div>
+            </div>
+            <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-700">
+              <div className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Recurring Revenue</div>
+              <div className="text-2xl font-black text-blue-400">${analytics.revenue.totalRecurring.toLocaleString()}</div>
+            </div>
+            <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-700 relative">
+              <div className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Active Alerts</div>
+              <div className="text-2xl font-black text-amber-400 flex items-center">
+                {analytics.alerts.count}
+                {analytics.alerts.count > 0 && <AlertTriangle className="w-4 h-4 ml-2 animate-pulse" />}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* TAB NAVIGATION */}
+      <div className="flex space-x-2 bg-slate-900 p-1 rounded-lg border border-slate-700 overflow-x-auto">
+        <button
+          onClick={() => setActiveTab('plan')}
+          className={`px-4 py-2 rounded text-sm font-bold transition whitespace-nowrap ${activeTab === 'plan' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+        >
+          Strategic Plan
+        </button>
+        <button
+          onClick={() => setActiveTab('financials')}
+          className={`px-4 py-2 rounded text-sm font-bold transition whitespace-nowrap ${activeTab === 'financials' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'}`}
+        >
+          Financial Targets
+        </button>
+        <button
+          onClick={() => setActiveTab('sops')}
+          className={`px-4 py-2 rounded text-sm font-bold transition whitespace-nowrap ${activeTab === 'sops' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+        >
+          Field SOPs
+        </button>
+        <button
+          onClick={() => setActiveTab('tech')}
+          className={`px-4 py-2 rounded text-sm font-bold transition whitespace-nowrap ${activeTab === 'tech' ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}`}
+        >
+          Tech Stack
+        </button>
       </div>
 
       {/* STRATEGIC PLAN TAB */}
@@ -51,7 +113,7 @@ export const MarketIntelligence: React.FC = () => {
               <Target className="mr-2 text-red-500" /> Executive Summary
             </h3>
             <p className="text-slate-300 mb-4 leading-relaxed">
-              <strong className="text-white">The Mission:</strong> To become the dominant vertically integrated HVAC provider in the NYC Metro area. 
+              <strong className="text-white">The Mission:</strong> To become the dominant vertically integrated HVAC provider in the NYC Metro area.
               By controlling the supply chain (direct procurement) and service delivery (AI dispatch), we eliminate middleman delays and double industry margins.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
@@ -102,30 +164,29 @@ export const MarketIntelligence: React.FC = () => {
             </div>
           </div>
 
-           {/* Competitive Landscape & Opportunities */}
-           <div className="bg-slate-800 p-6 rounded-lg border border-slate-700 col-span-1 lg:col-span-2">
+          {/* Competitive Landscape & Opportunities */}
+          <div className="bg-slate-800 p-6 rounded-lg border border-slate-700 col-span-1 lg:col-span-2">
             <h3 className="text-xl font-bold text-white mb-4 flex items-center">
               <BarChart3 className="mr-2 text-cyan-400" /> Competitive Landscape & Opportunities
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <h4 className="text-white font-bold mb-2 flex items-center text-sm"><Zap className="w-3 h-3 mr-2 text-amber-400"/> NY/NJ Growth Drivers</h4>
-                    <ul className="text-sm text-slate-400 space-y-2 mb-4">
-                        <li>• <strong>Weather Extremes:</strong> Hot summers/cold winters drive demand.</li>
-                        <li>• <strong>Demographics:</strong> Affluent $105k+ income households.</li>
-                        <li>• <strong>M&A Activity:</strong> High consolidation (2025 deals in NJ/PA).</li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 className="text-white font-bold mb-2 flex items-center text-sm"><Users className="w-3 h-3 mr-2 text-blue-400"/> Competitors</h4>
-                    <ul className="text-sm text-slate-400 space-y-2">
-                        <li>• <strong>Direct (Apps):</strong> CompanyCam (Photos), Fieldwire (Markups).</li>
-                        <li>• <strong>Indirect (Supply):</strong> Johnstone, Watsco, Ferguson.</li>
-                    </ul>
-                </div>
+              <div>
+                <h4 className="text-white font-bold mb-2 flex items-center text-sm"><Zap className="w-3 h-3 mr-2 text-amber-400" /> NY/NJ Growth Drivers</h4>
+                <ul className="text-sm text-slate-400 space-y-2 mb-4">
+                  <li>• <strong>Weather Extremes:</strong> Hot summers/cold winters drive demand.</li>
+                  <li>• <strong>Demographics:</strong> Affluent $105k+ income households.</li>
+                  <li>• <strong>M&A Activity:</strong> High consolidation (2025 deals in NJ/PA).</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="text-white font-bold mb-2 flex items-center text-sm"><Users className="w-3 h-3 mr-2 text-blue-400" /> Competitors</h4>
+                <ul className="text-sm text-slate-400 space-y-2">
+                  <li>• <strong>Direct (Apps):</strong> CompanyCam (Photos), Fieldwire (Markups).</li>
+                  <li>• <strong>Indirect (Supply):</strong> Johnstone, Watsco, Ferguson.</li>
+                </ul>
+              </div>
             </div>
-           </div>
-
+          </div>
         </div>
       )}
 
@@ -207,7 +268,7 @@ export const MarketIntelligence: React.FC = () => {
             <div>
               <h4 className="text-amber-400 font-bold mb-1">Field Policy: No Photos? No Problem.</h4>
               <p className="text-sm text-slate-300">
-                Physical access to client units is often restricted. Use the workflow below to generate professional case studies using 
+                Physical access to client units is often restricted. Use the workflow below to generate professional case studies using
                 <span className="text-white font-bold"> CompanyCam</span> or <span className="text-white font-bold">Fieldwire</span>.
               </p>
             </div>
@@ -261,72 +322,72 @@ export const MarketIntelligence: React.FC = () => {
         </div>
       )}
 
-      {/* TECH STACK TAB (NEW) */}
+      {/* TECH STACK TAB */}
       {activeTab === 'tech' && (
         <div className="space-y-6 animate-fadeIn">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-slate-800 p-4 rounded-lg border border-slate-700 shadow-lg relative group">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 rounded-l"></div>
-                    <h4 className="text-blue-400 font-bold mb-1 flex items-center"><Server className="w-4 h-4 mr-2" /> FSM Core</h4>
-                    <div className="text-2xl font-bold text-white mb-2">ServiceTitan</div>
-                    <p className="text-xs text-slate-400">Source of Truth for Jobs, Customers, and Dispatching.</p>
-                    <div className="mt-4 flex items-center text-xs text-emerald-400 bg-emerald-900/20 w-fit px-2 py-1 rounded border border-emerald-900/50">
-                        <Zap className="w-3 h-3 mr-1" /> API Sync Ready
-                    </div>
-                </div>
-
-                <div className="bg-slate-800 p-4 rounded-lg border border-slate-700 shadow-lg relative group">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-amber-500 rounded-l"></div>
-                    <h4 className="text-amber-400 font-bold mb-1 flex items-center"><Package className="w-4 h-4 mr-2" /> Inventory</h4>
-                    <div className="text-2xl font-bold text-white mb-2">Watsco API</div>
-                    <p className="text-xs text-slate-400">Real-time stock levels for Carrier, Trane, Rheem parts.</p>
-                    <div className="mt-4 flex items-center text-xs text-slate-400 bg-slate-700 w-fit px-2 py-1 rounded">
-                        <Globe className="w-3 h-3 mr-1" /> Integration Needed
-                    </div>
-                </div>
-
-                <div className="bg-slate-800 p-4 rounded-lg border border-slate-700 shadow-lg relative group">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 rounded-l"></div>
-                    <h4 className="text-emerald-400 font-bold mb-1 flex items-center"><Map className="w-4 h-4 mr-2" /> Logistics</h4>
-                    <div className="text-2xl font-bold text-white mb-2">Google Maps</div>
-                    <p className="text-xs text-slate-400">Route Matrix API for accurate traffic-aware ETA.</p>
-                    <div className="mt-4 flex items-center text-xs text-emerald-400 bg-emerald-900/20 w-fit px-2 py-1 rounded border border-emerald-900/50">
-                        <CheckSquare className="w-3 h-3 mr-1" /> Integrated
-                    </div>
-                </div>
-
-                <div className="bg-slate-800 p-4 rounded-lg border border-slate-700 shadow-lg relative group">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-purple-500 rounded-l"></div>
-                    <h4 className="text-purple-400 font-bold mb-1 flex items-center"><Database className="w-4 h-4 mr-2" /> Data Graph</h4>
-                    <div className="text-2xl font-bold text-white mb-2">Neo4j</div>
-                    <p className="text-xs text-slate-400">Maps Part Compatibility (Compressor A fits Unit B).</p>
-                    <div className="mt-4 flex items-center text-xs text-slate-400 bg-slate-700 w-fit px-2 py-1 rounded">
-                        <Cpu className="w-3 h-3 mr-1" /> Planning Phase
-                    </div>
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-slate-800 p-4 rounded-lg border border-slate-700 shadow-lg relative group">
+              <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 rounded-l"></div>
+              <h4 className="text-blue-400 font-bold mb-1 flex items-center"><Server className="w-4 h-4 mr-2" /> FSM Core</h4>
+              <div className="text-2xl font-bold text-white mb-2">ServiceTitan</div>
+              <p className="text-xs text-slate-400">Source of Truth for Jobs, Customers, and Dispatching.</p>
+              <div className="mt-4 flex items-center text-xs text-emerald-400 bg-emerald-900/20 w-fit px-2 py-1 rounded border border-emerald-900/50">
+                <Zap className="w-3 h-3 mr-1" /> API Sync Ready
+              </div>
             </div>
 
-            <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
-                <h3 className="text-lg font-bold text-white mb-4">Architecture Blueprint</h3>
-                <div className="relative p-6 bg-slate-900 rounded border border-slate-800">
-                    <div className="flex justify-between items-center text-sm font-mono text-slate-400">
-                        <div className="border-2 border-slate-700 p-4 rounded text-center w-1/4">
-                            <span className="text-blue-400 block mb-2 font-bold">Frontend</span>
-                            React / Tailwind
-                        </div>
-                        <ArrowRight className="text-slate-600" />
-                        <div className="border-2 border-indigo-500/50 p-4 rounded text-center w-1/4 bg-indigo-900/10">
-                            <span className="text-indigo-400 block mb-2 font-bold">Orchestrator</span>
-                            Node.js / Python
-                        </div>
-                        <ArrowRight className="text-slate-600" />
-                        <div className="border-2 border-slate-700 p-4 rounded text-center w-1/4">
-                            <span className="text-emerald-400 block mb-2 font-bold">Real Data</span>
-                            External APIs
-                        </div>
-                    </div>
-                </div>
+            <div className="bg-slate-800 p-4 rounded-lg border border-slate-700 shadow-lg relative group">
+              <div className="absolute top-0 left-0 w-1 h-full bg-amber-500 rounded-l"></div>
+              <h4 className="text-amber-400 font-bold mb-1 flex items-center"><Package className="w-4 h-4 mr-2" /> Inventory</h4>
+              <div className="text-2xl font-bold text-white mb-2">Watsco API</div>
+              <p className="text-xs text-slate-400">Real-time stock levels for Carrier, Trane, Rheem parts.</p>
+              <div className="mt-4 flex items-center text-xs text-slate-400 bg-slate-700 w-fit px-2 py-1 rounded">
+                <Globe className="w-3 h-3 mr-1" /> Integration Needed
+              </div>
             </div>
+
+            <div className="bg-slate-800 p-4 rounded-lg border border-slate-700 shadow-lg relative group">
+              <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 rounded-l"></div>
+              <h4 className="text-emerald-400 font-bold mb-1 flex items-center"><Map className="w-4 h-4 mr-2" /> Logistics</h4>
+              <div className="text-2xl font-bold text-white mb-2">Google Maps</div>
+              <p className="text-xs text-slate-400">Route Matrix API for accurate traffic-aware ETA.</p>
+              <div className="mt-4 flex items-center text-xs text-emerald-400 bg-emerald-900/20 w-fit px-2 py-1 rounded border border-emerald-900/50">
+                <CheckSquare className="w-3 h-3 mr-1" /> Integrated
+              </div>
+            </div>
+
+            <div className="bg-slate-800 p-4 rounded-lg border border-slate-700 shadow-lg relative group">
+              <div className="absolute top-0 left-0 w-1 h-full bg-purple-500 rounded-l"></div>
+              <h4 className="text-purple-400 font-bold mb-1 flex items-center"><Database className="w-4 h-4 mr-2" /> Data Graph</h4>
+              <div className="text-2xl font-bold text-white mb-2">Neo4j</div>
+              <p className="text-xs text-slate-400">Maps Part Compatibility (Compressor A fits Unit B).</p>
+              <div className="mt-4 flex items-center text-xs text-slate-400 bg-slate-700 w-fit px-2 py-1 rounded">
+                <Cpu className="w-3 h-3 mr-1" /> Planning Phase
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
+            <h3 className="text-lg font-bold text-white mb-4">Architecture Blueprint</h3>
+            <div className="relative p-6 bg-slate-900 rounded border border-slate-800">
+              <div className="flex justify-between items-center text-sm font-mono text-slate-400">
+                <div className="border-2 border-slate-700 p-4 rounded text-center w-1/4">
+                  <span className="text-blue-400 block mb-2 font-bold">Frontend</span>
+                  React / Tailwind
+                </div>
+                <ArrowRight className="text-slate-600" />
+                <div className="border-2 border-indigo-500/50 p-4 rounded text-center w-1/4 bg-indigo-900/10">
+                  <span className="text-indigo-400 block mb-2 font-bold">Orchestrator</span>
+                  Node.js / Python
+                </div>
+                <ArrowRight className="text-slate-600" />
+                <div className="border-2 border-slate-700 p-4 rounded text-center w-1/4">
+                  <span className="text-emerald-400 block mb-2 font-bold">Real Data</span>
+                  External APIs
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -335,5 +396,5 @@ export const MarketIntelligence: React.FC = () => {
 
 // Helper Icon for this component only
 const Package = ({ className }: { className?: string }) => (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22v-9"/></svg>
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m7.5 4.27 9 5.15" /><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" /><path d="m3.3 7 8.7 5 8.7-5" /><path d="M12 22v-9" /></svg>
 );

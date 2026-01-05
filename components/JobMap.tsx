@@ -604,16 +604,26 @@ export const JobMap: React.FC = () => {
                 {/* Map View */}
                 <div
                     ref={mapRef}
-                    className={`lg:col-span-2 bg-slate-800 rounded-lg border border-slate-700 relative overflow-hidden flex items-center justify-center group h-[500px] lg:h-full select-none
+                    className={`lg:col-span-2 bg-slate-950 rounded-lg border border-slate-800 relative overflow-hidden flex items-center justify-center group h-[500px] lg:h-full select-none shadow-inner
                 ${isLocationMode ? 'cursor-crosshair ring-2 ring-orange-500 ring-offset-2 ring-offset-slate-900' : ''}`}
                     onClick={handleMapClick}
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
                     onMouseLeave={handleMouseUp}
                 >
+                    {/* OPTIMIZATION SCANNING OVERLAY */}
+                    {optimizing && (
+                        <div className="absolute inset-0 z-50 pointer-events-none bg-indigo-500/10">
+                            <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(99,102,241,0.25)_50%)] bg-[size:100%_4px] animate-scan"></div>
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-indigo-900/90 text-indigo-200 px-4 py-2 rounded-lg border border-indigo-500/50 shadow-[0_0_30px_rgba(99,102,241,0.5)] flex items-center">
+                                <Loader2 className="w-5 h-5 mr-3 animate-spin" />
+                                <span className="font-mono text-sm tracking-widest uppercase font-bold">Optimizing Neural Routes...</span>
+                            </div>
+                        </div>
+                    )}
+
                     {/* TACTICAL MAP BACKGROUND */}
                     <div className="absolute inset-0 bg-slate-950 pointer-events-none overflow-hidden">
-
                         {/* 1. Base Grid (City Blocks) */}
                         <div className="absolute inset-0 opacity-20"
                             style={{
@@ -637,36 +647,31 @@ export const JobMap: React.FC = () => {
                         </div>
 
                         {/* 3. Abstract City Zones (Darker Blocks) */}
-                        {/* Downtown Hub */}
                         <div className="absolute top-[60%] left-[40%] w-[15%] h-[20%] bg-slate-900/80 border border-slate-800/50 backdrop-blur-sm"></div>
                         <div className="absolute top-[20%] left-[60%] w-[12%] h-[15%] bg-slate-900/80 border border-slate-800/50 backdrop-blur-sm"></div>
                         <div className="absolute top-[40%] left-[20%] w-[10%] h-[25%] bg-slate-900/80 border border-slate-800/50 backdrop-blur-sm"></div>
 
-                        {/* 4. Water Bodies (Geometric/Cyberpunk) */}
-                        {/* Hudson River Abstract */}
+                        {/* 4. Water Bodies */}
                         <div className="absolute top-0 bottom-0 left-[25%] w-[8%] bg-cyan-950/20 skew-x-12 border-x border-cyan-900/20"></div>
-                        {/* East River Abstract */}
                         <div className="absolute top-0 bottom-0 right-[30%] w-[6%] bg-cyan-950/20 skew-x-[-12deg] border-x border-cyan-900/20"></div>
 
                         {/* STRATEGIC ZONES OVERLAY */}
                         {showStrategicZones && (
                             <>
-                                {/* Zone 1: NYC Commercial */}
                                 <div className="absolute top-[35%] left-[55%] w-[25%] h-[35%] border-2 border-emerald-500/30 bg-emerald-500/5 rounded-lg flex items-center justify-center animate-pulse-slow">
                                     <span className="text-emerald-400 font-mono font-bold text-[10px] uppercase bg-slate-950/90 px-2 py-1 rounded border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
                                         Sector A: Midtown
                                     </span>
                                 </div>
-                                {/* Zone 2: NJ Hub */}
                                 <div className="absolute top-[40%] left-[5%] w-[20%] h-[40%] border-2 border-indigo-500/30 bg-indigo-500/5 rounded-lg flex items-center justify-center animate-pulse-slow">
                                     <span className="text-indigo-400 font-mono font-bold text-[10px] uppercase bg-slate-950/90 px-2 py-1 rounded border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
-                                        Sector B: Jersey Logistics
+                                        Sector B: Jersey Hub
                                     </span>
                                 </div>
                             </>
                         )}
 
-                        {/* 5. Landmarks (Digital Labels) */}
+                        {/* 5. Landmarks */}
                         {LANDMARKS.map((mark, i) => {
                             const pos = getProjectedPosition(mark.lat, mark.lng);
                             return (
@@ -686,21 +691,14 @@ export const JobMap: React.FC = () => {
                             const techPos = getProjectedPosition(tech.location.lat, tech.location.lng);
                             const techJobs = jobs.filter(j => j.techId === tech.id && j.status !== JobStatus.COMPLETED);
                             const techColor = TECH_COLORS[idx % TECH_COLORS.length];
-
-                            // Interaction State
-                            const isHovered = hoveredTechId === tech.id;
                             const isDimmed = (hoveredTechId && hoveredTechId !== tech.id) || isLocationMode;
 
                             if (techJobs.length === 0) return null;
 
-                            // Sort jobs by distance to create a logical path: Tech -> Job 1 -> Job 2
                             let currentPos = techPos;
                             let pathData = `M ${currentPos.left} ${currentPos.top}`;
-
                             let remainingJobs = [...techJobs];
                             let safety = 0;
-
-                            const orderedJobs: Job[] = []; // Store order for determining "Stop #" later
 
                             while (remainingJobs.length > 0 && safety < 20) {
                                 remainingJobs.sort((a, b) => {
@@ -710,13 +708,11 @@ export const JobMap: React.FC = () => {
                                     const distB = Math.hypot(posB.left - currentPos.left, posB.top - currentPos.top);
                                     return distA - distB;
                                 });
-
                                 const nextJob = remainingJobs.shift();
                                 if (nextJob) {
                                     const nextPos = getProjectedPosition(nextJob.location.lat, nextJob.location.lng);
                                     pathData += ` L ${nextPos.left} ${nextPos.top}`;
                                     currentPos = nextPos;
-                                    orderedJobs.push(nextJob);
                                 }
                                 safety++;
                             }
@@ -729,38 +725,32 @@ export const JobMap: React.FC = () => {
                                             <feComposite in="SourceGraphic" in2="blur" operator="over" />
                                         </filter>
                                     </defs>
-
-                                    {/* 1. Underlying Glow Path */}
                                     <path
                                         d={pathData}
                                         stroke={techColor}
-                                        strokeWidth={isHovered ? "2" : "1"}
-                                        strokeOpacity="0.3"
+                                        strokeWidth="1" // Thicker for better visibility
+                                        strokeOpacity="0.4"
                                         fill="none"
                                         style={{ filter: `url(#glow-${tech.id})` }}
                                         vectorEffect="non-scaling-stroke"
                                     />
-
-                                    {/* 2. Core Bright Path */}
                                     <path
                                         d={pathData}
                                         stroke={techColor}
-                                        strokeWidth={isHovered ? "0.8" : "0.5"}
-                                        strokeDasharray={isHovered ? "4,4" : "0"} // Solid line unless hovered for precision effect
+                                        strokeWidth="0.8"
+                                        strokeDasharray="3,3"
                                         fill="none"
-                                        className={isHovered ? "animate-[dash_1s_linear_infinite]" : ""}
+                                        className="animate-[dash_30s_linear_infinite]"
                                         style={{ strokeLinecap: 'round', strokeLinejoin: 'round' }}
                                         vectorEffect="non-scaling-stroke"
                                     />
-
-                                    {/* Start Node */}
                                     <circle cx={techPos.left} cy={techPos.top} r="0.8" fill={techColor} className="animate-pulse" />
                                 </g>
                             );
                         })}
                     </svg>
 
-                    {/* New Job Pin (Draggable) */}
+                    {/* New Job Pin */}
                     {isLocationMode && newJobLocation && (
                         <div
                             className="absolute transform -translate-x-1/2 -translate-y-1/2 z-50 cursor-move"
@@ -771,164 +761,115 @@ export const JobMap: React.FC = () => {
                             onMouseDown={handlePinMouseDown}
                         >
                             <div className="relative group">
-                                <div className="absolute inset-0 rounded-full bg-orange-500 blur-sm animate-pulse"></div>
-                                <MapPin className="w-8 h-8 text-orange-500 fill-orange-950 drop-shadow-xl" />
-                                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-orange-600 text-white text-[10px] font-bold px-2 py-1 rounded whitespace-nowrap shadow-lg">
-                                    New Job
-                                </div>
+                                <MapPin className="w-8 h-8 text-orange-500 fill-orange-950 drop-shadow-xl animate-bounce" />
+                                <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-900 border border-orange-500 text-orange-400 text-[10px] font-bold px-2 py-0.5 rounded shadow-lg">New Job</div>
                             </div>
                         </div>
                     )}
 
-                    {/* Location Mode Banner */}
+                    {/* Location Mode UI */}
                     {isLocationMode && (
-                        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-slate-900/90 border border-slate-600 rounded-full px-6 py-3 shadow-2xl z-50 flex items-center space-x-4 backdrop-blur-md animate-in slide-in-from-top-4">
-                            <div className="flex flex-col">
-                                <span className="text-white font-bold text-sm flex items-center">
-                                    <MousePointer2 className="w-4 h-4 mr-2 text-orange-400" />
-                                    {newJobLocation ? "Drag pin to adjust" : "Click map to set location"}
-                                </span>
-                                {newJobLocation && <span className="text-[10px] text-slate-400 font-mono mt-0.5">{newJobLocation.lat.toFixed(4)}, {newJobLocation.lng.toFixed(4)}</span>}
-                            </div>
-                            <div className="h-8 w-px bg-slate-700"></div>
-                            <div className="flex space-x-2">
-                                <button onClick={() => { setIsLocationMode(false); setIsModalOpen(true); }} className="text-xs text-slate-300 hover:text-white font-bold px-2 py-1 transition">Cancel</button>
-                                <button
-                                    onClick={confirmLocation}
-                                    disabled={!newJobLocation}
-                                    className={`text-xs px-3 py-1.5 rounded-full font-bold transition flex items-center ${newJobLocation ? 'bg-orange-600 hover:bg-orange-500 text-white shadow-lg shadow-orange-900/20' : 'bg-slate-700 text-slate-500 cursor-not-allowed'}`}
-                                >
-                                    <Check className="w-3 h-3 mr-1" /> Confirm
-                                </button>
-                            </div>
+                        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-slate-900/90 border border-slate-600 rounded-full px-6 py-3 shadow-2xl z-50 flex items-center space-x-4 backdrop-blur-md">
+                            <span className="text-white font-bold text-sm flex items-center">
+                                <MousePointer2 className="w-4 h-4 mr-2 text-orange-400" />
+                                {newJobLocation ? "Drag pin to locate" : "Click map to set location"}
+                            </span>
+                            <div className="h-4 w-px bg-slate-700"></div>
+                            <button onClick={() => { setIsLocationMode(false); setIsModalOpen(true); }} className="text-xs text-slate-400 hover:text-white px-2">Cancel</button>
+                            <button
+                                onClick={confirmLocation}
+                                disabled={!newJobLocation}
+                                className={`text-xs px-3 py-1.5 rounded-full font-bold transition ${newJobLocation ? 'bg-orange-600 text-white shadow-lg shadow-orange-900/20' : 'bg-slate-700 text-slate-500 cursor-not-allowed'}`}
+                            >
+                                Confirm
+                            </button>
                         </div>
                     )}
 
-                    {/* Technicians */}
+                    {/* TECHNICIAN HUD MARKERS (OVERHAULED) */}
                     {technicians.map((tech, idx) => {
                         const pos = getProjectedPosition(tech.location.lat, tech.location.lng);
                         const isAvailable = tech.isAvailable;
                         const techColor = TECH_COLORS[idx % TECH_COLORS.length];
                         const isDimmed = (hoveredTechId && hoveredTechId !== tech.id) || isLocationMode;
 
-                        // LIVE STATUS LOGIC
                         const activeJob = jobs.find(j => j.techId === tech.id && j.status === JobStatus.EN_ROUTE);
-                        let statusText = "Idle";
+                        let statusText = "IDLE";
                         let etaText = "";
                         let isMoving = false;
 
                         if (activeJob) {
                             isMoving = true;
-                            statusText = "En Route";
+                            statusText = "EN ROUTE";
                             const dist = calculateDistance(tech.location.lat, tech.location.lng, activeJob.location.lat, activeJob.location.lng);
                             const minutes = Math.ceil((dist / AVG_SPEED_MPH) * 60);
-                            etaText = `ETA: ${minutes} min`;
+                            etaText = `${minutes} min`;
                         } else if (jobs.some(j => j.techId === tech.id && j.status === JobStatus.IN_PROGRESS)) {
-                            statusText = "On Site";
+                            statusText = "ON SITE";
                         }
+
+                        // Don't show offline techs on map unless debugging
+                        if (!isAvailable) return null;
 
                         return (
                             <div
                                 key={tech.id}
                                 onMouseEnter={() => setHoveredTechId(tech.id)}
                                 onMouseLeave={() => setHoveredTechId(null)}
-                                className={`absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-1000 ease-linear z-30 ${isDimmed ? 'opacity-20 blur-[1px]' : 'opacity-100'}`}
+                                className={`absolute transform -translate-x-1/2 -translate-y-1/2 z-30 transition-all duration-500 ${isDimmed ? 'opacity-20 blur-[1px]' : 'opacity-100'}`}
                                 style={{ top: `${pos.top}%`, left: `${pos.left}%` }}
                             >
+                                {/* HUD Card Container */}
                                 <div className="relative group">
-                                    <div className={`absolute inset-0 rounded-full blur-sm opacity-50 ${isMoving ? 'animate-pulse' : ''}`} style={{ backgroundColor: isAvailable ? techColor : '#475569' }}></div>
-                                    <div className="relative flex items-center justify-center w-9 h-9 rounded-full border-2 shadow-[0_0_15px_rgba(0,0,0,0.5)] transition-transform hover:scale-110" style={{
-                                        backgroundColor: isAvailable ? techColor : '#475569',
-                                        borderColor: isAvailable ? '#fff' : '#94a3b8'
-                                    }}>
-                                        <Truck className={`w-5 h-5 text-white ${isMoving ? 'animate-bounce-slight' : ''}`} />
-                                        {isAvailable && <div className="absolute -inset-1 rounded-full animate-ping opacity-20" style={{ backgroundColor: techColor }}></div>}
+                                    {/* Central Node */}
+                                    <div className={`relative flex items-center justify-center w-8 h-8 rounded-full border-2 shadow-[0_0_20px_rgba(0,0,0,0.6)] bg-slate-900 z-20 cursor-pointer
+                                        ${isMoving ? 'animate-pulse' : ''}`}
+                                        style={{ borderColor: techColor }}
+                                    >
+                                        <Truck className="w-4 h-4 text-white" />
                                     </div>
-                                    {/* Label */}
-                                    <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white text-[10px] px-2 py-1 rounded border border-slate-700 whitespace-nowrap opacity-0 group-hover:opacity-100 transition shadow-lg font-bold flex flex-col items-center z-50 pointer-events-none">
-                                        <span>{tech.name}</span>
-                                        <span className={`font-normal ${isMoving ? 'text-emerald-400' : 'text-slate-400'}`}>
-                                            {statusText} {etaText && `• ${etaText}`}
-                                        </span>
+
+                                    {/* Info Panel ALWAYS Visible (Tactical Feel) */}
+                                    <div className="absolute top-1/2 left-full ml-3 -translate-y-1/2 bg-slate-900/90 border border-slate-700 rounded p-1.5 shadow-xl backdrop-blur-md w-24 flex flex-col z-10 transition-all group-hover:scale-105 group-hover:border-slate-500">
+                                        {/* Connector Line */}
+                                        <div className="absolute top-1/2 -left-3 w-3 h-px bg-slate-700"></div>
+                                        <div className="absolute top-1/2 -left-1 w-1 h-1 bg-slate-500 rounded-full -translate-y-1/2"></div>
+
+                                        <div className="text-[10px] font-bold text-white leading-none mb-1">{tech.name.split(' ')[0]}</div>
+                                        <div className="flex justify-between items-center">
+                                            <span className={`text-[8px] font-mono uppercase ${isMoving ? 'text-blue-400' : 'text-slate-500'}`}>{statusText}</span>
+                                            {etaText && <span className="text-[8px] text-emerald-400 font-bold">{etaText}</span>}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         );
                     })}
 
-                    {/* Jobs */}
+                    {/* Jobs Markers (Simplified Pins) */}
                     {jobs.filter(j => j.status !== JobStatus.COMPLETED).map((job) => {
                         const pos = getProjectedPosition(job.location.lat, job.location.lng);
                         const isUnassigned = !job.techId;
                         const isInProgress = job.status === JobStatus.IN_PROGRESS;
                         const assignedTech = technicians.find(t => t.id === job.techId);
-                        const assignedTechIdx = technicians.findIndex(t => t.id === job.techId);
-                        const techColor = assignedTech ? TECH_COLORS[assignedTechIdx % TECH_COLORS.length] : null;
-
+                        const techColor = assignedTech ? TECH_COLORS[technicians.findIndex(t => t.id === job.techId) % TECH_COLORS.length] : '#fff';
                         const isDimmed = (hoveredTechId && hoveredTechId !== job.techId && job.techId) || isLocationMode;
-
-                        // Determine Job Sequence for Badge
-                        let sequenceNo = null;
-                        if (assignedTech) {
-                            const techJobs = jobs.filter(j => j.techId === assignedTech.id && j.status !== JobStatus.COMPLETED);
-
-                            let currentPos = getProjectedPosition(assignedTech.location.lat, assignedTech.location.lng);
-                            let remaining = [...techJobs];
-                            let safety = 0;
-                            const sortedIds: string[] = [];
-
-                            while (remaining.length > 0 && safety < 20) {
-                                remaining.sort((a, b) => {
-                                    const posA = getProjectedPosition(a.location.lat, a.location.lng);
-                                    const posB = getProjectedPosition(b.location.lat, b.location.lng);
-                                    const distA = Math.hypot(posA.left - currentPos.left, posA.top - currentPos.top);
-                                    const distB = Math.hypot(posB.left - currentPos.left, posB.top - currentPos.top);
-                                    return distA - distB;
-                                });
-
-                                const next = remaining.shift();
-                                if (next) {
-                                    sortedIds.push(next.id);
-                                    currentPos = getProjectedPosition(next.location.lat, next.location.lng);
-                                }
-                                safety++;
-                            }
-                            const idx = sortedIds.indexOf(job.id);
-                            if (idx >= 0) sequenceNo = idx + 1;
-                        }
 
                         return (
                             <div
                                 key={job.id}
                                 onClick={(e) => { e.stopPropagation(); setSelectedJob(job); }}
-                                className={`absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all z-20 ${isDimmed ? 'opacity-20' : 'opacity-100'} hover:z-40`}
+                                className={`absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all z-20 ${isDimmed ? 'opacity-20' : 'opacity-100'}`}
                                 style={{ top: `${pos.top}%`, left: `${pos.left}%` }}
                             >
-                                <div className="relative group">
-                                    {isInProgress && (
-                                        <div className="absolute inset-0 rounded-full animate-ping bg-emerald-500 opacity-40"></div>
-                                    )}
-                                    <div className={`relative flex items-center justify-center w-8 h-8 rounded-full border-2 shadow-lg transition-transform hover:scale-110 
-                            ${isUnassigned ? 'bg-slate-700 border-white text-white' : ''}`}
-                                        style={{
-                                            backgroundColor: isUnassigned ? '#334155' : '#1e293b',
-                                            borderColor: techColor || '#fff'
-                                        }}
-                                    >
-                                        {isInProgress ? <Wrench className="w-4 h-4 text-emerald-400" /> : <Briefcase className={`w-4 h-4 ${isUnassigned ? 'text-white' : 'text-slate-300'}`} />}
-
-                                        {/* Sequence Badge */}
-                                        {sequenceNo && (
-                                            <div className="absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-sm border border-slate-900" style={{ backgroundColor: techColor || '#64748b' }}>
-                                                {sequenceNo}
-                                            </div>
-                                        )}
-                                    </div>
-
+                                <div className="flex flex-col items-center group">
+                                    <div className={`w-3 h-3 rounded-full border shadow-sm ${isInProgress ? 'animate-ping absolute opacity-40 bg-emerald-500' : ''}`}></div>
+                                    <div className={`w-3 h-3 rounded-full border shadow-lg relative ${isUnassigned ? 'bg-red-500 border-white' : 'bg-slate-900'}`}
+                                        style={{ borderColor: isUnassigned ? '#fff' : techColor, backgroundColor: isUnassigned ? '#ef4444' : '#1e293b' }}
+                                    ></div>
                                     {/* Hover Tooltip */}
-                                    <div className="absolute top-10 left-1/2 -translate-x-1/2 w-32 bg-slate-900/95 text-white p-2 rounded border border-slate-700 shadow-xl opacity-0 group-hover:opacity-100 transition pointer-events-none z-50">
-                                        <div className="text-xs font-bold truncate">{job.clientName}</div>
-                                        <div className="text-[10px] text-slate-400 truncate">{job.description}</div>
+                                    <div className="absolute top-4 bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition whitespace-nowrap z-50">
+                                        {job.clientName}
                                     </div>
                                 </div>
                             </div>
@@ -936,59 +877,83 @@ export const JobMap: React.FC = () => {
                     })}
                 </div>
 
-                {/* Dispatch Panel */}
-                <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 flex flex-col h-[500px] lg:h-full overflow-hidden">
-                    <h3 className="text-white font-bold mb-4 flex items-center">
-                        <Briefcase className="w-4 h-4 mr-2 text-slate-400" />
-                        Job Queue
-                        <span className="ml-2 bg-slate-700 text-slate-300 text-xs px-2 py-0.5 rounded-full">
-                            {jobs.filter(j => j.status !== JobStatus.COMPLETED).length}
-                        </span>
-                    </h3>
+                {/* DISPATCH SIDEBAR (Overhauled) */}
+                <div className="bg-slate-900 rounded-lg border border-slate-700 flex flex-col h-[500px] lg:h-full overflow-hidden shadow-xl">
+                    <div className="p-4 border-b border-slate-800 bg-slate-950/50">
+                        <h3 className="text-white font-bold flex items-center justify-between">
+                            <span className="flex items-center"><Briefcase className="w-4 h-4 mr-2 text-indigo-400" /> Active Ops</span>
+                            <span className="text-[10px] font-mono text-slate-500">
+                                {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                        </h3>
+                    </div>
 
-                    <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-                        {jobs.sort((a, b) => (a.status === JobStatus.PENDING ? -1 : 1)).map(job => (
-                            <div
-                                key={job.id}
-                                onClick={() => setSelectedJob(job)}
-                                className={`p-3 rounded-lg border cursor-pointer transition relative overflow-hidden group
-                            ${selectedJob?.id === job.id ? 'border-indigo-500 bg-indigo-900/10 ring-1 ring-indigo-500/50' : 'border-slate-700 bg-slate-900 hover:border-slate-600'}`}
-                            >
-                                {/* Status Bar */}
-                                <div className={`absolute left-0 top-0 bottom-0 w-1 ${job.status === JobStatus.IN_PROGRESS ? 'bg-emerald-500' :
-                                    job.status === JobStatus.EN_ROUTE ? 'bg-blue-500' :
-                                        'bg-red-500'
-                                    }`}></div>
-
-                                <div className="pl-3">
-                                    <div className="flex justify-between items-start mb-1">
-                                        <span className="font-bold text-sm text-white truncate">{job.clientName}</span>
-                                        <span className="text-[10px] text-slate-400 font-mono">{job.timestamp}</span>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                        {/* 1. Unassigned Queue */}
+                        <div>
+                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex justify-between">
+                                Pending Assignment
+                                <span className="bg-red-900/30 text-red-400 px-1.5 rounded-full text-[10px]">{jobs.filter(j => !j.techId && j.status !== JobStatus.COMPLETED).length}</span>
+                            </h4>
+                            <div className="space-y-2">
+                                {jobs.filter(j => !j.techId && j.status !== JobStatus.COMPLETED).length === 0 && (
+                                    <div className="text-center py-4 border border-dashed border-slate-800 rounded bg-slate-900/50">
+                                        <p className="text-xs text-slate-600">No pending tickets</p>
                                     </div>
-                                    <p className="text-xs text-slate-400 mb-2 truncate">{job.description}</p>
-
-                                    <div className="flex justify-between items-center">
-                                        {job.techId ? (
-                                            <div className="flex items-center">
-                                                <div className="w-5 h-5 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center overflow-hidden mr-1.5">
-                                                    <img src={technicians.find(t => t.id === job.techId)?.avatar} className="w-full h-full object-cover" alt="Tech" />
-                                                </div>
-                                                <span className="text-xs text-slate-300">{technicians.find(t => t.id === job.techId)?.name.split(' ')[0]}</span>
-                                            </div>
-                                        ) : (
-                                            <span className="text-[10px] bg-red-900/30 text-red-400 px-1.5 py-0.5 rounded border border-red-900/50">Unassigned</span>
-                                        )}
-
-                                        <span className={`text-[10px] px-1.5 py-0.5 rounded border ${job.status === JobStatus.IN_PROGRESS ? 'bg-emerald-900/20 text-emerald-400 border-emerald-900/50' :
-                                            job.status === JobStatus.EN_ROUTE ? 'bg-blue-900/20 text-blue-400 border-blue-900/50' :
-                                                'bg-slate-700 text-slate-400 border-slate-600'
-                                            }`}>
-                                            {job.status}
-                                        </span>
+                                )}
+                                {jobs.filter(j => !j.techId && j.status !== JobStatus.COMPLETED).map(job => (
+                                    <div key={job.id} onClick={() => setSelectedJob(job)} className="bg-slate-800 p-3 rounded border-l-2 border-red-500 hover:bg-slate-700 cursor-pointer transition group">
+                                        <div className="flex justify-between items-start mb-1">
+                                            <span className="font-bold text-sm text-white group-hover:text-indigo-300 transition">{job.clientName}</span>
+                                            <span className="text-[10px] bg-slate-900 text-slate-400 px-1 rounded">{job.requiredSkillLevel?.substring(0, 1)}</span>
+                                        </div>
+                                        <p className="text-xs text-slate-400 truncate">{job.description}</p>
                                     </div>
-                                </div>
+                                ))}
                             </div>
-                        ))}
+                        </div>
+
+                        {/* 2. Active Technicians & Routes */}
+                        <div>
+                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Field Teams</h4>
+                            <div className="space-y-3">
+                                {technicians.filter(t => t.isAvailable).map((tech, idx) => {
+                                    const techJobs = jobs.filter(j => j.techId === tech.id && j.status !== JobStatus.COMPLETED)
+                                        .sort((a, b) => (a.status === JobStatus.IN_PROGRESS ? -1 : 1)); // Active first
+                                    const statusLine = techJobs.length > 0 ? `${techJobs.length} Active Jobs` : 'Available';
+
+                                    return (
+                                        <div key={tech.id} className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center">
+                                                    <div className="w-8 h-8 rounded-full border-2 p-0.5 mr-2" style={{ borderColor: TECH_COLORS[idx % TECH_COLORS.length] }}>
+                                                        <img src={tech.avatar} className="w-full h-full rounded-full object-cover" alt={tech.name} />
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-sm font-bold text-white leading-none">{tech.name}</div>
+                                                        <div className="text-[10px] text-slate-400">{statusLine}</div>
+                                                    </div>
+                                                </div>
+                                                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                                            </div>
+
+                                            {/* Mini Route List */}
+                                            {techJobs.length > 0 && (
+                                                <div className="space-y-1 mt-2 pl-3 border-l border-slate-700 ml-3">
+                                                    {techJobs.map(j => (
+                                                        <div key={j.id} onClick={() => setSelectedJob(j)} className="text-xs text-slate-300 flex items-center cursor-pointer hover:text-white">
+                                                            <div className={`w-1.5 h-1.5 rounded-full mr-2 ${j.status === JobStatus.IN_PROGRESS ? 'bg-emerald-500' : 'bg-blue-500'
+                                                                }`}></div>
+                                                            <span className="truncate">{j.clientName}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

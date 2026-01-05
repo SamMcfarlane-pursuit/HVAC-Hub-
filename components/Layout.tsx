@@ -2,6 +2,8 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Activity, Map, Package, Wrench, Menu, PieChart, Power } from 'lucide-react';
+import { NotificationBell } from './NotificationBell';
+import { ConnectionStatus } from './ConnectionStatus';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -31,9 +33,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 w-full bg-slate-900 border-b border-slate-800 z-50 p-4 flex justify-between items-center">
         <div className="font-bold text-white text-xl">HVAC<span className="text-blue-500">Hub</span></div>
-        <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-white">
-          <Menu />
-        </button>
+        <div className="flex items-center space-x-2">
+          <NotificationBell />
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-white p-2">
+            <Menu />
+          </button>
+        </div>
       </div>
 
       {/* Sidebar */}
@@ -42,9 +47,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0
       `}>
         <div className="p-6 border-b border-slate-800">
-          <div className="text-2xl font-black text-white tracking-tight flex items-center">
-            <div className="w-8 h-8 bg-blue-600 rounded mr-2 flex items-center justify-center text-white">H</div>
-            HVAC<span className="text-blue-500">Hub</span>
+          <div className="flex items-center justify-between">
+            <div className="text-2xl font-black text-white tracking-tight flex items-center">
+              <div className="w-8 h-8 bg-blue-600 rounded mr-2 flex items-center justify-center text-white">H</div>
+              HVAC<span className="text-blue-500">Hub</span>
+            </div>
+            <div className="hidden md:block">
+              <NotificationBell />
+            </div>
           </div>
           <div className="text-[10px] text-slate-500 uppercase tracking-widest mt-1">Operating System v2.0</div>
         </div>
@@ -100,6 +110,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           onClick={() => setSidebarOpen(false)}
         />
       )}
+
+      {/* Connection Status */}
+      <ConnectionStatus />
     </div>
   );
 };

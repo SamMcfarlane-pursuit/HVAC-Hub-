@@ -1,6 +1,11 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { z } from 'zod';
-import { LoginSchema } from '../utils/validation';
+
+// Inline validation schema to avoid import issues with Vercel
+const LoginSchema = z.object({
+    username: z.string().min(3, "Username must be at least 3 characters"),
+    password: z.string().min(6, "Password must be at least 6 characters")
+});
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // CORS
@@ -21,8 +26,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Validate Input
         const { username, password } = LoginSchema.parse(req.body);
 
-        // MOCK AUTHENTICATION (Replace with real DB lookup)
-        if (username === 'admin' && password === 'hvac2026') {
+        // MOCK AUTHENTICATION - accepts both old and new credentials
+        if ((username === 'admin' && password === 'hvac2026') ||
+            (username === 'admin@hvachub.com' && password === 'admin123')) {
             const token = `mock_token_${Date.now()}_${Math.random().toString(36).substr(2)}`;
 
             return res.status(200).json({
@@ -38,6 +44,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (error instanceof z.ZodError) {
             return res.status(400).json({ error: 'Validation Error', details: error.errors });
         }
+        console.error('Auth error:', error);
         return res.status(500).json({ error: 'Internal Server Error' });
     }
 }

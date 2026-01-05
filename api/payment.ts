@@ -1,11 +1,17 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
 import { z } from 'zod';
-import { PaymentIntentSchema } from '../utils/validation';
+
+// Inline validation schema to avoid import issues with Vercel
+const PaymentIntentSchema = z.object({
+    amount: z.number().min(50, "Minimum amount is $0.50").max(999999, "Amount precise limit exceeded"),
+    currency: z.string().length(3).default('usd'),
+    assetId: z.string().min(1, "Asset ID is required")
+});
 
 // Initialize Stripe (Use env var or mock key for dev)
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_mock_key', {
-    apiVersion: '2025-12-15.clover', // Use latest API version available or fallback
+    apiVersion: '2025-12-15.clover',
 });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -26,9 +32,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (isMockMode) {
             // Return a mock client secret for frontend demo flow
-            // Note: The frontend must handle this "mock" secret specially if using real Stripe Elements,
-            // OR we just return success: true and skip Stripe Elements for the DEMO if keys are missing.
-            // For this implementation, we will simulate a "created" intent.
             return res.status(200).json({
                 clientSecret: 'mock_secret_' + Math.random().toString(36),
                 dpmCheckerLink: 'https://example.com/mock-link',
@@ -46,7 +49,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         return res.status(200).json({
             clientSecret: paymentIntent.client_secret,
-            // @ts-ignore - dpm_checker_link might vary by SDK version
             dpmCheckerLink: paymentIntent.latest_charge,
         });
 

@@ -62,39 +62,43 @@ export const LoginPage: React.FC = () => {
                 </div>
 
                 {error && (
-                    <div className="bg-red-900/40 border border-red-800 text-red-300 px-4 py-3 rounded-lg mb-6 flex items-start">
-                        <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
+                    <div role="alert" aria-live="polite" className="bg-red-900/40 border border-red-800 text-red-300 px-4 py-3 rounded-lg mb-6 flex items-start">
+                        <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" aria-hidden="true" />
                         <span className="text-sm">{error}</span>
                     </div>
                 )}
 
                 <form onSubmit={handleLogin} className="space-y-6">
                     <div>
-                        <label className="block text-sm font-medium text-slate-400 mb-2">Username</label>
+                        <label htmlFor="username" className="block text-sm font-medium text-slate-400 mb-2">Username</label>
                         <div className="relative">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <User className="h-5 w-5 text-slate-500" />
+                                <User className="h-5 w-5 text-slate-500" aria-hidden="true" />
                             </div>
                             <input
-                                type="text"
+                                id="username"
+                                type="email"
                                 required
+                                autoComplete="email"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
                                 className="block w-full pl-10 bg-slate-800 border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                placeholder="admin"
+                                placeholder="admin@hvachub.com"
                             />
                         </div>
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-slate-400 mb-2">Password</label>
+                        <label htmlFor="password" className="block text-sm font-medium text-slate-400 mb-2">Password</label>
                         <div className="relative">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Lock className="h-5 w-5 text-slate-500" />
+                                <Lock className="h-5 w-5 text-slate-500" aria-hidden="true" />
                             </div>
                             <input
+                                id="password"
                                 type="password"
                                 required
+                                autoComplete="current-password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="block w-full pl-10 bg-slate-800 border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
