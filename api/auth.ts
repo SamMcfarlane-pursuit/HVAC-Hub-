@@ -1,11 +1,19 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { z } from 'zod';
 
-// Inline validation schema to avoid import issues with Vercel
+// Inline validation schema
 const LoginSchema = z.object({
-    username: z.string().min(3, "Username must be at least 3 characters"),
-    password: z.string().min(6, "Password must be at least 6 characters")
+    username: z.string().min(1, "Username is required"),
+    password: z.string().min(1, "Password is required")
 });
+
+// Valid credentials database (in production, this would be a real database)
+const validCredentials = [
+    { username: 'admin', password: 'hvac2026', name: 'Admin User', role: 'admin' },
+    { username: 'admin@hvachub.com', password: 'hvac2026', name: 'Admin User', role: 'admin' },
+    { username: 'demo', password: 'demo123', name: 'Demo User', role: 'viewer' },
+    { username: 'test', password: 'test123', name: 'Test User', role: 'technician' }
+];
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // CORS
@@ -26,23 +34,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Validate Input
         const { username, password } = LoginSchema.parse(req.body);
 
-        // MOCK AUTHENTICATION - accepts both old and new credentials
-        if ((username === 'admin' && password === 'hvac2026') ||
-            (username === 'admin@hvachub.com' && password === 'admin123')) {
-            const token = `mock_token_${Date.now()}_${Math.random().toString(36).substr(2)}`;
+        // Normalize username (trim whitespace, lowercase)
+        const normalizedUsername = username.trim().toLowerCase();
+
+        // Find matching credentials
+        const user = validCredentials.find(
+            cred => cred.username.toLowerCase() === normalizedUsername && cred.password === password
+        );
+
+        if (user) {
+            const token = `hvac_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
             return res.status(200).json({
                 success: true,
                 token,
-                user: { id: 'u1', name: 'Admin User', role: 'admin' }
+                user: {
+                    id: `u_${Math.random().toString(36).substr(2, 6)}`,
+                    name: user.name,
+                    role: user.role,
+                    username: user.username
+                }
             });
         }
 
-        return res.status(401).json({ error: 'Invalid credentials' });
+        // Return helpful error message
+        return res.status(401).json({
+            error: 'Invalid credentials',
+            hint: 'Try: admin / hvac2026'
+        });
 
     } catch (error: any) {
         if (error instanceof z.ZodError) {
-            return res.status(400).json({ error: 'Validation Error', details: error.issues });
+            return res.status(400).json({
+                error: 'Validation Error',
+                details: error.issues.map(i => i.message).join(', ')
+            });
         }
         console.error('Auth error:', error);
         return res.status(500).json({ error: 'Internal Server Error' });

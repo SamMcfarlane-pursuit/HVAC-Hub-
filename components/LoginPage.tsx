@@ -67,7 +67,7 @@ export const LoginPage: React.FC = () => {
             // Redirect to dashboard
             navigate('/', { replace: true });
         } catch (err: any) {
-            setError(err.message);
+            setError(err.message + (err.hint ? ` (Hint: ${err.hint})` : ''));
         } finally {
             setLoading(false);
         }
