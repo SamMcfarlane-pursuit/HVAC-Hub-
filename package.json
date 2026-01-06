@@ -12,6 +12,7 @@
     "@google/genai": "^1.30.0",
     "@stripe/react-stripe-js": "^5.4.1",
     "@stripe/stripe-js": "^8.6.0",
+    "@supabase/supabase-js": "^2.89.0",
     "@types/dompurify": "^3.0.5",
     "dompurify": "^3.3.1",
     "lucide-react": "^0.555.0",
