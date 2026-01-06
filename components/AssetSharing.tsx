@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Wrench, ShieldCheck, Calendar, MapPin, User, Loader2, Star, Filter, Search, TrendingUp, Clock, Banknote, BadgeCheck } from 'lucide-react';
+import { Wrench, ShieldCheck, Calendar, MapPin, User, Loader2, Star, Filter, Search, TrendingUp, Clock, Banknote, BadgeCheck, Plus, CalendarDays } from 'lucide-react';
 import { Asset } from '../types';
 import { PaymentModal } from './PaymentModal';
+import { ListAssetModal } from './ListAssetModal';
 
 type FilterType = 'ALL' | 'HEAVY' | 'TOOLS' | 'DIAGNOSTIC';
 
@@ -15,12 +16,20 @@ export const AssetSharing: React.FC = () => {
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
 
+    // List Asset Modal
+    const [isListModalOpen, setIsListModalOpen] = useState(false);
+
+    // Date Range Picker State
+    const [rentalDays, setRentalDays] = useState(1);
+    const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+
     useEffect(() => {
         fetchAssets();
     }, []);
 
     const fetchAssets = async () => {
         try {
+            setLoading(true);
             const res = await fetch('/api/assets');
             if (res.ok) {
                 const data = await res.json();
@@ -42,10 +51,9 @@ export const AssetSharing: React.FC = () => {
         if (!selectedAsset) return;
 
         const assetId = selectedAsset.id;
-        setIsPaymentModalOpen(false); // Close modal first
+        setIsPaymentModalOpen(false);
 
         try {
-            // Optimistic update
             setAssets(prev => prev.map(a => a.id === assetId ? { ...a, status: 'Rented' } : a));
 
             await fetch('/api/assets', {
@@ -54,13 +62,16 @@ export const AssetSharing: React.FC = () => {
                 body: JSON.stringify({ id: assetId, status: 'Rented' })
             });
 
-            // Clear selection
             setSelectedAsset(null);
-
         } catch (error) {
             console.error('Booking failed', error);
-            fetchAssets(); // Revert on error
+            fetchAssets();
         }
+    };
+
+    const handleListSuccess = () => {
+        setIsListModalOpen(false);
+        fetchAssets();
     };
 
     // Filter Logic
@@ -71,14 +82,13 @@ export const AssetSharing: React.FC = () => {
         if (!matchesSearch) return false;
 
         if (activeFilter === 'ALL') return true;
-        // Simple heuristic for demo categories since data might be loose
         if (activeFilter === 'HEAVY') return asset.category.includes('Machinery') || asset.category.includes('Heavy');
         if (activeFilter === 'TOOLS') return asset.category.includes('Tool') || asset.category.includes('Drill');
         if (activeFilter === 'DIAGNOSTIC') return asset.category.includes('Meter') || asset.category.includes('Camera');
         return true;
     });
 
-    // Mock Stats
+    // Stats
     const activeRentals = assets.filter(a => a.status === 'Rented').length;
     const availableAssets = assets.filter(a => a.status === 'Available').length;
 
@@ -101,20 +111,28 @@ export const AssetSharing: React.FC = () => {
                     </h2>
                     <p className="text-slate-400 text-sm">Peer-to-peer heavy equipment rental network.</p>
                 </div>
-                <div className="relative w-full md:w-96 group">
-                    <Search className="absolute left-3 top-3 w-5 h-5 text-slate-500 group-focus-within:text-indigo-400 transition" />
-                    <input
-                        type="text"
-                        placeholder="Find equipment or owners..."
-                        className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2.5 pl-10 pr-4 text-white focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all focus:border-indigo-500 shadow-inner"
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                    />
+                <div className="flex items-center gap-3">
+                    <div className="relative w-full md:w-80 group">
+                        <Search className="absolute left-3 top-3 w-5 h-5 text-slate-500 group-focus-within:text-indigo-400 transition" />
+                        <input
+                            type="text"
+                            placeholder="Find equipment or owners..."
+                            className="w-full bg-slate-900 border border-slate-700 rounded-lg py-2.5 pl-10 pr-4 text-white focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all focus:border-indigo-500 shadow-inner"
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <button
+                        onClick={() => setIsListModalOpen(true)}
+                        className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-lg font-bold flex items-center transition shadow-lg shadow-indigo-900/20"
+                    >
+                        <Plus className="w-5 h-5 mr-1" /> List Asset
+                    </button>
                 </div>
             </div>
 
             {/* NETWORK STATS */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex items-center shadow-lg">
                     <div className="p-3 bg-indigo-500/10 rounded-lg text-indigo-400 mr-4">
                         <Clock className="w-6 h-6" />
@@ -139,7 +157,32 @@ export const AssetSharing: React.FC = () => {
                     </div>
                     <div>
                         <div className="text-slate-400 text-xs font-bold uppercase tracking-wider">Network Utilization</div>
-                        <div className="text-2xl font-black text-white">{Math.round((activeRentals / assets.length) * 100)}%</div>
+                        <div className="text-2xl font-black text-white">{assets.length > 0 ? Math.round((activeRentals / assets.length) * 100) : 0}%</div>
+                    </div>
+                </div>
+
+                {/* DATE PICKER CARD */}
+                <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-lg">
+                    <div className="flex items-center mb-2">
+                        <CalendarDays className="w-4 h-4 text-indigo-400 mr-2" />
+                        <span className="text-xs font-bold text-slate-400 uppercase">Rental Period</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className="flex-1 px-2 py-1.5 bg-slate-900 border border-slate-600 rounded text-white text-sm focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <select
+                            value={rentalDays}
+                            onChange={(e) => setRentalDays(parseInt(e.target.value))}
+                            className="px-2 py-1.5 bg-slate-900 border border-slate-600 rounded text-white text-sm focus:ring-2 focus:ring-indigo-500"
+                        >
+                            {[1, 2, 3, 5, 7, 14, 30].map(d => (
+                                <option key={d} value={d}>{d} day{d > 1 ? 's' : ''}</option>
+                            ))}
+                        </select>
                     </div>
                 </div>
             </div>
@@ -151,14 +194,15 @@ export const AssetSharing: React.FC = () => {
                         key={type}
                         onClick={() => setActiveFilter(type)}
                         className={`px-4 py-1.5 rounded-full text-xs font-bold transition flex items-center border ${activeFilter === type
-                                ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-500/20'
-                                : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-200'
+                            ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-500/20'
+                            : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-200'
                             }`}
                     >
                         {type === 'ALL' && <Filter className="w-3 h-3 mr-1.5" />}
                         {type}
                     </button>
                 ))}
+                <span className="ml-auto text-slate-500 text-sm">{filteredAssets.length} assets</span>
             </div>
 
             {/* ASSET GRID */}
@@ -178,8 +222,8 @@ export const AssetSharing: React.FC = () => {
                             {/* STATUS BADGE */}
                             <div className="absolute top-3 right-3 z-20">
                                 <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wide border shadow-sm backdrop-blur-md ${asset.status === 'Available'
-                                        ? 'bg-emerald-500/90 text-white border-emerald-400'
-                                        : 'bg-slate-900/90 text-slate-400 border-slate-600'
+                                    ? 'bg-emerald-500/90 text-white border-emerald-400'
+                                    : 'bg-slate-900/90 text-slate-400 border-slate-600'
                                     }`}>
                                     {asset.status === 'Available' ? 'Ready to Book' : 'Currently Rented'}
                                 </span>
@@ -187,8 +231,10 @@ export const AssetSharing: React.FC = () => {
 
                             {/* PRICE TAG */}
                             <div className="absolute bottom-3 right-3 z-20 flex flex-col items-end">
-                                <span className="text-2xl font-black text-white text-shadow-lg">${asset.dailyRate}</span>
-                                <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">Per Day</span>
+                                <span className="text-2xl font-black text-white text-shadow-lg">${asset.dailyRate * rentalDays}</span>
+                                <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider">
+                                    {rentalDays} day{rentalDays > 1 ? 's' : ''} @ ${asset.dailyRate}/day
+                                </span>
                             </div>
                         </div>
 
@@ -231,11 +277,11 @@ export const AssetSharing: React.FC = () => {
                                     onClick={() => handleBookClick(asset)}
                                     disabled={asset.status !== 'Available'}
                                     className={`px-4 py-2 rounded-lg font-bold text-xs transition uppercase tracking-wide ${asset.status === 'Available'
-                                            ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-900/20'
-                                            : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                                        ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-900/20'
+                                        : 'bg-slate-700 text-slate-500 cursor-not-allowed'
                                         }`}
                                 >
-                                    {asset.status === 'Available' ? 'Book Asset' : 'Unavailable'}
+                                    {asset.status === 'Available' ? 'Book Now' : 'Unavailable'}
                                 </button>
                             </div>
                         </div>
@@ -249,11 +295,19 @@ export const AssetSharing: React.FC = () => {
                     isOpen={isPaymentModalOpen}
                     onClose={() => setIsPaymentModalOpen(false)}
                     onSuccess={handlePaymentSuccess}
-                    amount={selectedAsset.dailyRate}
+                    amount={selectedAsset.dailyRate * rentalDays}
                     assetName={selectedAsset.name}
                     assetId={selectedAsset.id}
                 />
             )}
+
+            {/* List Asset Modal */}
+            <ListAssetModal
+                isOpen={isListModalOpen}
+                onClose={() => setIsListModalOpen(false)}
+                onSuccess={handleListSuccess}
+            />
         </div>
     );
 };
+

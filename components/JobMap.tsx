@@ -109,6 +109,7 @@ export const JobMap: React.FC = () => {
     const [optimizing, setOptimizing] = useState(false);
     const [hoveredTechId, setHoveredTechId] = useState<string | null>(null);
     const [showStrategicZones, setShowStrategicZones] = useState(false);
+    const [showTrafficLayer, setShowTrafficLayer] = useState(false);
 
     // Manual Location Picking State
     const [isLocationMode, setIsLocationMode] = useState(false);
@@ -567,6 +568,14 @@ export const JobMap: React.FC = () => {
                         <Radio className="w-3 h-3 mr-1" /> LIVE GPS
                     </span>
 
+                    {/* Traffic Layer Toggle */}
+                    <button
+                        onClick={() => setShowTrafficLayer(!showTrafficLayer)}
+                        className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center transition border ${showTrafficLayer ? 'bg-amber-900 text-amber-300 border-amber-700' : 'bg-slate-700 text-slate-300 border-slate-600 hover:bg-slate-600'}`}
+                    >
+                        <AlertTriangle className="w-4 h-4 mr-1" /> Traffic
+                    </button>
+
                     {/* Strategic Zones Toggle */}
                     <button
                         onClick={() => setShowStrategicZones(!showStrategicZones)}
@@ -667,6 +676,41 @@ export const JobMap: React.FC = () => {
                                     <span className="text-indigo-400 font-mono font-bold text-[10px] uppercase bg-slate-950/90 px-2 py-1 rounded border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
                                         Sector B: Jersey Hub
                                     </span>
+                                </div>
+                            </>
+                        )}
+
+                        {/* TRAFFIC LAYER OVERLAY */}
+                        {showTrafficLayer && (
+                            <>
+                                {/* Heavy Traffic - Red zones */}
+                                <div className="absolute top-[30%] left-[45%] w-[30%] h-[3%] bg-red-500/30 rounded-full blur-sm animate-pulse" />
+                                <div className="absolute top-[50%] left-[35%] w-[20%] h-[2%] bg-red-500/30 rounded-full blur-sm animate-pulse" />
+
+                                {/* Moderate Traffic - Yellow zones */}
+                                <div className="absolute top-[45%] left-[55%] w-[25%] h-[2%] bg-amber-500/25 rounded-full blur-sm" />
+                                <div className="absolute top-[25%] left-[30%] w-[15%] h-[2%] bg-amber-500/25 rounded-full blur-sm" />
+                                <div className="absolute top-[60%] left-[20%] w-[18%] h-[2%] bg-amber-500/25 rounded-full blur-sm" />
+
+                                {/* Light Traffic - Green zones */}
+                                <div className="absolute top-[70%] left-[50%] w-[22%] h-[2%] bg-emerald-500/20 rounded-full blur-sm" />
+                                <div className="absolute top-[15%] left-[60%] w-[20%] h-[2%] bg-emerald-500/20 rounded-full blur-sm" />
+
+                                {/* Traffic Legend */}
+                                <div className="absolute bottom-3 left-3 bg-slate-900/90 border border-slate-700 rounded-lg p-2 text-[10px] backdrop-blur-md z-30">
+                                    <div className="text-slate-400 font-bold uppercase mb-1">Traffic</div>
+                                    <div className="flex items-center gap-2 mb-0.5">
+                                        <div className="w-3 h-2 bg-red-500/60 rounded" />
+                                        <span className="text-red-400">Heavy</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 mb-0.5">
+                                        <div className="w-3 h-2 bg-amber-500/60 rounded" />
+                                        <span className="text-amber-400">Moderate</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-2 bg-emerald-500/60 rounded" />
+                                        <span className="text-emerald-400">Light</span>
+                                    </div>
                                 </div>
                             </>
                         )}

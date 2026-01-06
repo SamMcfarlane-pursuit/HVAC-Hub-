@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { User, Palette, Bell, Shield, Save, Loader2, Camera, Moon, Sun, Monitor, Check, Mail, Smartphone, AlertTriangle, Clock, Key, LogOut, Trash2 } from 'lucide-react';
+import { User, Palette, Bell, Shield, Save, Loader2, Camera, Moon, Sun, Monitor, Check, Mail, Smartphone, AlertTriangle, Clock, Key, LogOut, Trash2, Download, Database, Globe, Link2, Copy, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 
-type TabKey = 'profile' | 'appearance' | 'notifications' | 'security';
+type TabKey = 'profile' | 'appearance' | 'notifications' | 'security' | 'data' | 'integrations';
 
 interface UserProfile {
     name: string;
@@ -81,7 +81,9 @@ export const SettingsPage: React.FC = () => {
         { key: 'profile', label: 'Profile', icon: <User className="w-4 h-4" /> },
         { key: 'appearance', label: 'Appearance', icon: <Palette className="w-4 h-4" /> },
         { key: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
-        { key: 'security', label: 'Security', icon: <Shield className="w-4 h-4" /> }
+        { key: 'security', label: 'Security', icon: <Shield className="w-4 h-4" /> },
+        { key: 'data', label: 'Data & Export', icon: <Database className="w-4 h-4" /> },
+        { key: 'integrations', label: 'Integrations', icon: <Link2 className="w-4 h-4" /> }
     ];
 
     const themeOptions: { value: 'dark' | 'light' | 'system'; label: string; icon: React.ReactNode }[] = [
@@ -105,8 +107,8 @@ export const SettingsPage: React.FC = () => {
                         key={tab.key}
                         onClick={() => setActiveTab(tab.key)}
                         className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${activeTab === tab.key
-                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
-                                : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
+                            : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
                             }`}
                     >
                         {tab.icon}
@@ -193,8 +195,8 @@ export const SettingsPage: React.FC = () => {
                                         key={option.value}
                                         onClick={() => setTheme(option.value)}
                                         className={`flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all ${theme === option.value
-                                                ? 'border-blue-500 bg-blue-500/10'
-                                                : 'border-slate-700 hover:border-slate-600 bg-slate-800/50'
+                                            ? 'border-blue-500 bg-blue-500/10'
+                                            : 'border-slate-700 hover:border-slate-600 bg-slate-800/50'
                                             }`}
                                     >
                                         <div className={`p-3 rounded-full ${theme === option.value ? 'bg-blue-500 text-white' : 'bg-slate-700 text-slate-400'}`}>
@@ -401,6 +403,210 @@ export const SettingsPage: React.FC = () => {
                         </div>
                     </div>
                 )}
+
+                {/* Data & Export Tab */}
+                {activeTab === 'data' && (
+                    <div className="space-y-6">
+                        <h2 className="text-xl font-semibold text-white mb-4">Data & Export</h2>
+
+                        {/* Export Options */}
+                        <div className="space-y-4">
+                            <h3 className="text-sm font-medium text-slate-300 uppercase tracking-wide">Export Your Data</h3>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-slate-600 transition">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400">
+                                            <Download className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <p className="text-white font-medium">Jobs History</p>
+                                            <p className="text-slate-500 text-sm">Export all completed jobs</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button className="flex-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition">
+                                            CSV
+                                        </button>
+                                        <button className="flex-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition">
+                                            JSON
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-slate-600 transition">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400">
+                                            <Download className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <p className="text-white font-medium">Parts Inventory</p>
+                                            <p className="text-slate-500 text-sm">Export stock levels</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button className="flex-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition">
+                                            CSV
+                                        </button>
+                                        <button className="flex-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition">
+                                            JSON
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-slate-600 transition">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="p-2 bg-amber-500/10 rounded-lg text-amber-400">
+                                            <Download className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <p className="text-white font-medium">Technician Data</p>
+                                            <p className="text-slate-500 text-sm">Export team info</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button className="flex-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition">
+                                            CSV
+                                        </button>
+                                        <button className="flex-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition">
+                                            JSON
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-slate-600 transition">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400">
+                                            <Database className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <p className="text-white font-medium">Full Backup</p>
+                                            <p className="text-slate-500 text-sm">Download all data</p>
+                                        </div>
+                                    </div>
+                                    <button className="w-full px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition">
+                                        Download ZIP
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Locale Settings */}
+                        <div className="space-y-4 pt-4 border-t border-slate-700">
+                            <h3 className="text-sm font-medium text-slate-300 uppercase tracking-wide flex items-center gap-2">
+                                <Globe className="w-4 h-4" /> Locale & Language
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-400 mb-2">Language</label>
+                                    <select className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white">
+                                        <option value="en-US">English (US)</option>
+                                        <option value="en-GB">English (UK)</option>
+                                        <option value="es">Español</option>
+                                        <option value="fr">Français</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-400 mb-2">Timezone</label>
+                                    <select className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-white">
+                                        <option value="America/New_York">Eastern Time (ET)</option>
+                                        <option value="America/Chicago">Central Time (CT)</option>
+                                        <option value="America/Denver">Mountain Time (MT)</option>
+                                        <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Integrations Tab */}
+                {activeTab === 'integrations' && (
+                    <div className="space-y-6">
+                        <h2 className="text-xl font-semibold text-white mb-4">Integrations</h2>
+
+                        {/* API Keys */}
+                        <div className="space-y-4">
+                            <h3 className="text-sm font-medium text-slate-300 uppercase tracking-wide flex items-center gap-2">
+                                <Key className="w-4 h-4" /> API Keys
+                            </h3>
+
+                            <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div>
+                                        <p className="text-white font-medium">Production API Key</p>
+                                        <p className="text-slate-500 text-xs">Created Jan 1, 2026</p>
+                                    </div>
+                                    <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 text-xs font-medium rounded-full">Active</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="password"
+                                        value="hvac_prod_xxxxxxxxxxxxxxxxxxxxxxxx"
+                                        readOnly
+                                        className="flex-1 px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-slate-400 text-sm font-mono"
+                                    />
+                                    <button className="p-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition">
+                                        <Copy className="w-4 h-4" />
+                                    </button>
+                                    <button className="p-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition">
+                                        <RefreshCw className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition flex items-center gap-2">
+                                <Key className="w-4 h-4" /> Generate New Key
+                            </button>
+                        </div>
+
+                        {/* Connected Services */}
+                        <div className="space-y-4 pt-4 border-t border-slate-700">
+                            <h3 className="text-sm font-medium text-slate-300 uppercase tracking-wide">Connected Services</h3>
+
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center text-orange-400 font-bold">ST</div>
+                                        <div>
+                                            <p className="text-white font-medium">ServiceTitan</p>
+                                            <p className="text-slate-500 text-sm">CRM & Dispatch Integration</p>
+                                        </div>
+                                    </div>
+                                    <button className="px-4 py-2 bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 text-sm font-medium rounded-lg">
+                                        Connected
+                                    </button>
+                                </div>
+
+                                <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center text-blue-400 font-bold">QB</div>
+                                        <div>
+                                            <p className="text-white font-medium">QuickBooks</p>
+                                            <p className="text-slate-500 text-sm">Accounting & Invoicing</p>
+                                        </div>
+                                    </div>
+                                    <button className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition">
+                                        Connect
+                                    </button>
+                                </div>
+
+                                <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center text-green-400 font-bold">SP</div>
+                                        <div>
+                                            <p className="text-white font-medium">Stripe</p>
+                                            <p className="text-slate-500 text-sm">Payment Processing</p>
+                                        </div>
+                                    </div>
+                                    <button className="px-4 py-2 bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 text-sm font-medium rounded-lg">
+                                        Connected
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Save Button */}
@@ -409,8 +615,8 @@ export const SettingsPage: React.FC = () => {
                     onClick={handleSave}
                     disabled={saving}
                     className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white transition-all ${saved
-                            ? 'bg-emerald-600'
-                            : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-lg shadow-blue-500/25'
+                        ? 'bg-emerald-600'
+                        : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-lg shadow-blue-500/25'
                         }`}
                 >
                     {saving ? (
