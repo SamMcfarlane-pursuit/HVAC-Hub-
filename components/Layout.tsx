@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Activity, Map, Package, Wrench, Menu, PieChart, Power } from 'lucide-react';
+import { LayoutDashboard, Activity, Map, Package, Wrench, Menu, PieChart, Power, Settings } from 'lucide-react';
 import { NotificationBell } from './NotificationBell';
 import { ConnectionStatus } from './ConnectionStatus';
 
@@ -66,6 +66,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           <NavItem to="/routing" icon={Map} label="Live Routing" />
           <NavItem to="/supply" icon={Package} label="Supply Chain" />
           <NavItem to="/assets" icon={Wrench} label="Asset Network" />
+          <NavItem to="/settings" icon={Settings} label="Settings" />
         </nav>
 
         <div className="absolute bottom-0 w-full p-4 border-t border-slate-800">

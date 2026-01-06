@@ -9,6 +9,8 @@ import { SignUpPage } from './components/SignUpPage';
 import { ForgotPasswordPage } from './components/ForgotPasswordPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Dashboard } from './components/Dashboard';
+import { SettingsPage } from './components/SettingsPage';
+import { ThemeProvider } from './components/ThemeProvider';
 
 // Lazy load - secondary routes
 const SmartTriage = lazy(() => import('./components/SmartTriage').then(m => ({ default: m.SmartTriage })));
@@ -29,30 +31,33 @@ const PageLoader = () => (
 
 const App: React.FC = () => {
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/signup" element={<SignUpPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+    <ThemeProvider>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-      {/* Protected Routes */}
-      <Route path="/*" element={
-        <ProtectedRoute>
-          <Layout>
-            <Suspense fallback={<PageLoader />}>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/market" element={<MarketIntelligence />} />
-                <Route path="/triage" element={<SmartTriage />} />
-                <Route path="/routing" element={<JobMap />} />
-                <Route path="/supply" element={<SupplyChain />} />
-                <Route path="/assets" element={<AssetSharing />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </Suspense>
-          </Layout>
-        </ProtectedRoute>
-      } />
-    </Routes>
+        {/* Protected Routes */}
+        <Route path="/*" element={
+          <ProtectedRoute>
+            <Layout>
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/market" element={<MarketIntelligence />} />
+                  <Route path="/triage" element={<SmartTriage />} />
+                  <Route path="/routing" element={<JobMap />} />
+                  <Route path="/supply" element={<SupplyChain />} />
+                  <Route path="/assets" element={<AssetSharing />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </Suspense>
+            </Layout>
+          </ProtectedRoute>
+        } />
+      </Routes>
+    </ThemeProvider>
   );
 };
 
