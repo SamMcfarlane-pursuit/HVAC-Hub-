@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-import { jobs } from './data/store.js';
+import { jobs } from './data/store';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // CORS headers
