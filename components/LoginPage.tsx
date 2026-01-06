@@ -1,19 +1,39 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Lock, User, AlertCircle, Loader2, Eye, EyeOff, Zap, Shield } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Lock, User, AlertCircle, Loader2, Eye, EyeOff, Zap, Shield, CheckCircle } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
+
+    // Load remembered credentials on mount
+    useEffect(() => {
+        const savedUsername = localStorage.getItem('rememberedUsername');
+        const savedPassword = localStorage.getItem('rememberedPassword');
+        if (savedUsername && savedPassword) {
+            setUsername(savedUsername);
+            setPassword(savedPassword);
+            setRememberMe(true);
+        }
+
+        // Check for success message from signup
+        const state = location.state as { message?: string };
+        if (state?.message) {
+            setSuccessMessage(state.message);
+        }
+    }, [location.state]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
+        setSuccessMessage(null);
         setLoading(true);
 
         try {
@@ -31,11 +51,17 @@ export const LoginPage: React.FC = () => {
                 throw new Error(data.error || 'Login failed');
             }
 
+            // Remember credentials if checkbox is checked
+            if (rememberMe) {
+                localStorage.setItem('rememberedUsername', username);
+                localStorage.setItem('rememberedPassword', password);
+            } else {
+                localStorage.removeItem('rememberedUsername');
+                localStorage.removeItem('rememberedPassword');
+            }
+
             // Store auth data
-            const storage = rememberMe ? localStorage : sessionStorage;
-            storage.setItem('authToken', data.token);
-            storage.setItem('user', JSON.stringify(data.user));
-            localStorage.setItem('authToken', data.token); // Always store for ProtectedRoute check
+            localStorage.setItem('authToken', data.token);
             localStorage.setItem('user', JSON.stringify(data.user));
 
             // Redirect to dashboard
@@ -87,6 +113,15 @@ export const LoginPage: React.FC = () => {
                         <p className="text-slate-500 text-sm">Sign in to continue to your dashboard</p>
                     </div>
 
+                    {/* Success Message */}
+                    {successMessage && (
+                        <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-4 py-3 rounded-xl mb-6 flex items-start">
+                            <CheckCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
+                            <span className="text-sm">{successMessage}</span>
+                        </div>
+                    )}
+
+                    {/* Error Message */}
                     {error && (
                         <div role="alert" aria-live="polite" className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl mb-6 flex items-start animate-pulse">
                             <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" aria-hidden="true" />
@@ -160,9 +195,9 @@ export const LoginPage: React.FC = () => {
                                     Remember me
                                 </span>
                             </label>
-                            <button type="button" className="text-sm text-blue-400 hover:text-blue-300 transition-colors">
+                            <Link to="/forgot-password" className="text-sm text-blue-400 hover:text-blue-300 transition-colors">
                                 Forgot password?
-                            </button>
+                            </Link>
                         </div>
 
                         {/* Sign In Button */}
@@ -191,6 +226,16 @@ export const LoginPage: React.FC = () => {
                             Fill Demo Credentials
                         </button>
                     </form>
+
+                    {/* Sign Up Link */}
+                    <div className="mt-6 text-center border-t border-slate-700/50 pt-6">
+                        <p className="text-slate-400 text-sm">
+                            Don't have an account?{' '}
+                            <Link to="/signup" className="text-blue-400 hover:text-blue-300 font-medium">
+                                Create Account
+                            </Link>
+                        </p>
+                    </div>
                 </div>
 
                 {/* Footer */}

@@ -5,6 +5,8 @@ import { Loader2 } from 'lucide-react';
 // Eager load - critical path
 import { Layout } from './components/Layout';
 import { LoginPage } from './components/LoginPage';
+import { SignUpPage } from './components/SignUpPage';
+import { ForgotPasswordPage } from './components/ForgotPasswordPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Dashboard } from './components/Dashboard';
 
@@ -29,6 +31,8 @@ const App: React.FC = () => {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignUpPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
       {/* Protected Routes */}
       <Route path="/*" element={
