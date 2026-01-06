@@ -1,6 +1,44 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-import { technicians } from './data/store';
+// Inline data to avoid import issues in Vercel serverless
+const technicians = [
+    {
+        id: "T001",
+        name: "Alex Rivera",
+        level: "Master",
+        location: { lat: 40.7128, lng: -74.0060, label: "Lower Manhattan" },
+        inventory: ["P101", "P102", "P115"],
+        avatar: "https://picsum.photos/id/1005/50/50",
+        isAvailable: true,
+    },
+    {
+        id: "T002",
+        name: "Sarah Chen",
+        level: "Journeyman",
+        location: { lat: 40.7484, lng: -73.9857, label: "Midtown" },
+        inventory: ["P103", "P120"],
+        avatar: "https://picsum.photos/id/1011/50/50",
+        isAvailable: true,
+    },
+    {
+        id: "T003",
+        name: "Mike Kowalski",
+        level: "Apprentice",
+        location: { lat: 40.7831, lng: -73.9712, label: "Upper West Side" },
+        inventory: ["P101", "P104", "P112"],
+        avatar: "https://picsum.photos/id/1025/50/50",
+        isAvailable: true,
+    },
+    {
+        id: "T004",
+        name: "David Kim",
+        level: "Master",
+        location: { lat: 40.6782, lng: -73.9442, label: "Brooklyn Hub" },
+        inventory: ["P105", "P106", "P118"],
+        avatar: "https://picsum.photos/id/1012/50/50",
+        isAvailable: false,
+    }
+];
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Access-Control-Allow-Origin', '*');

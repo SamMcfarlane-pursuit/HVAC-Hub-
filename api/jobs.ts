@@ -1,6 +1,70 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-import { jobs } from './data/store';
+// Inline data to avoid import issues in Vercel serverless
+const jobs = [
+    {
+        id: "J101",
+        clientId: "C501",
+        clientName: "Empire State Prop",
+        address: "350 5th Ave, NY",
+        description: "Chiller 2 vibration alert",
+        status: "In Progress",
+        techId: "T001",
+        timestamp: "10:30 AM",
+        requiredSkillLevel: "Master",
+        location: { lat: 40.7484, lng: -73.9857 },
+        estimatedDuration: 4
+    },
+    {
+        id: "J102",
+        clientId: "C502",
+        clientName: "Joe's Pizza",
+        address: "145 W 4th St, NY",
+        description: "Walk-in freezer warm",
+        status: "En Route",
+        techId: "T002",
+        timestamp: "11:15 AM",
+        requiredSkillLevel: "Journeyman",
+        location: { lat: 40.7305, lng: -74.0021 },
+        estimatedDuration: 2
+    },
+    {
+        id: "J103",
+        clientId: "C503",
+        clientName: "Res. Complex A",
+        address: "220 CPS, NY",
+        description: "Seasonal Maintenance",
+        status: "Pending",
+        timestamp: "12:00 PM",
+        requiredSkillLevel: "Apprentice",
+        location: { lat: 40.7663, lng: -73.9774 },
+        estimatedDuration: 1.5
+    },
+    {
+        id: "J104",
+        clientId: "C504",
+        clientName: "Tech Startup HQ",
+        address: "111 8th Ave, NY",
+        description: "Server room AC failure",
+        status: "Pending",
+        timestamp: "09:00 AM",
+        requiredSkillLevel: "Master",
+        location: { lat: 40.7410, lng: -74.0025 },
+        estimatedDuration: 3
+    },
+    {
+        id: "J105",
+        clientId: "C505",
+        clientName: "Brooklyn Hospital",
+        address: "121 Dekalb Ave, BK",
+        description: "Negative pressure error",
+        status: "Pending",
+        timestamp: "08:30 AM",
+        requiredSkillLevel: "Journeyman",
+        location: { lat: 40.6905, lng: -73.9772 },
+        estimatedDuration: 5
+    }
+];
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // CORS headers
