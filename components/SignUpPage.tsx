@@ -38,10 +38,24 @@ export const SignUpPage: React.FC = () => {
         setLoading(true);
 
         try {
-            // Mock signup - in production, this would call /api/signup
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            const response = await fetch('/api/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fullName: formData.fullName,
+                    email: formData.email,
+                    company: formData.company,
+                    username: formData.username,
+                    password: formData.password
+                })
+            });
 
-            // Simulate successful registration
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || data.details || 'Sign up failed');
+            }
+
             setSuccess(true);
 
             // Redirect to login after 2 seconds

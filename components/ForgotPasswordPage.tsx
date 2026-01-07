@@ -14,8 +14,18 @@ export const ForgotPasswordPage: React.FC = () => {
         setLoading(true);
 
         try {
-            // Mock password reset - in production, this would call /api/reset-password
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            const response = await fetch('/api/reset-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to send reset email');
+            }
+
             setSuccess(true);
         } catch (err: any) {
             setError(err.message || 'Failed to send reset email');
