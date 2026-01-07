@@ -1,11 +1,19 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+let supabase: SupabaseClient | null = null;
 
-// Fallback data
+function getSupabase(): SupabaseClient | null {
+    if (supabase) return supabase;
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_ANON_KEY;
+    if (url && key) {
+        supabase = createClient(url, key);
+        return supabase;
+    }
+    return null;
+}
+
 const fallbackTechnicians = [
     { id: "T001", name: "Alex Rivera", level: "Master", location: { lat: 40.7128, lng: -74.0060, label: "Lower Manhattan" }, inventory: ["P101", "P102", "P115"], avatar: "https://picsum.photos/id/1005/50/50", isAvailable: true },
     { id: "T002", name: "Sarah Chen", level: "Journeyman", location: { lat: 40.7484, lng: -73.9857, label: "Midtown" }, inventory: ["P103", "P120"], avatar: "https://picsum.photos/id/1011/50/50", isAvailable: true },
@@ -34,15 +42,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).end();
     }
 
-    const useDatabase = supabaseUrl && supabaseAnonKey;
+    const db = getSupabase();
 
     try {
         if (req.method === 'GET') {
-            if (!useDatabase) {
+            if (!db) {
                 return res.status(200).json(fallbackTechnicians);
             }
 
-            const { data, error } = await supabase.from('technicians').select('*');
+            const { data, error } = await db.from('technicians').select('*');
             if (error) throw error;
 
             return res.status(200).json(data.map(dbToFrontend));
@@ -51,7 +59,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (req.method === 'PUT') {
             const { id, ...updates } = req.body;
 
-            if (!useDatabase) {
+            if (!db) {
                 const techIndex = fallbackTechnicians.findIndex(t => t.id === id);
                 if (techIndex > -1) {
                     fallbackTechnicians[techIndex] = { ...fallbackTechnicians[techIndex], ...updates };
@@ -68,7 +76,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 if (updates.location.label) dbUpdates.location_label = updates.location.label;
             }
 
-            const { data, error } = await supabase.from('technicians').update(dbUpdates).eq('id', id).select().single();
+            const { data, error } = await db.from('technicians').update(dbUpdates).eq('id', id).select().single();
             if (error) throw error;
 
             return res.status(200).json(dbToFrontend(data));

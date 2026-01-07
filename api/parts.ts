@@ -1,11 +1,19 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+let supabase: SupabaseClient | null = null;
 
-// Fallback data
+function getSupabase(): SupabaseClient | null {
+    if (supabase) return supabase;
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_ANON_KEY;
+    if (url && key) {
+        supabase = createClient(url, key);
+        return supabase;
+    }
+    return null;
+}
+
 const fallbackParts = [
     { id: "P101", name: "Run Capacitor 35+5", sku: "CAP-355-UNIV", category: "Electrical", price: 15.00, stock: 12, locationType: "Warehouse", locationName: "Queens Hub", distance: "4.2 mi" },
     { id: "P102", name: "Contactor 2-Pole 30A", sku: "CTR-2P30", category: "Electrical", price: 22.50, stock: 4, locationType: "Van", locationName: "T001 (Alex)", distance: "0.8 mi" },
@@ -42,15 +50,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).end();
     }
 
-    const useDatabase = supabaseUrl && supabaseAnonKey;
+    const db = getSupabase();
 
     try {
         if (req.method === 'GET') {
-            if (!useDatabase) {
+            if (!db) {
                 return res.status(200).json(fallbackParts);
             }
 
-            const { data, error } = await supabase.from('parts').select('*');
+            const { data, error } = await db.from('parts').select('*');
             if (error) throw error;
 
             return res.status(200).json(data.map(dbToFrontend));
@@ -63,7 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(400).json({ error: 'Missing part ID or quantity' });
             }
 
-            if (!useDatabase) {
+            if (!db) {
                 const partIndex = fallbackParts.findIndex(p => p.id === id);
                 if (partIndex > -1) {
                     fallbackParts[partIndex].stock += quantity;
@@ -72,12 +80,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(404).json({ error: 'Part not found' });
             }
 
-            // Get current stock and update
-            const { data: part, error: fetchError } = await supabase.from('parts').select('stock').eq('id', id).single();
+            const { data: part, error: fetchError } = await db.from('parts').select('stock').eq('id', id).single();
             if (fetchError) throw fetchError;
 
             const newStock = (part.stock || 0) + quantity;
-            const { data, error } = await supabase.from('parts').update({ stock: newStock }).eq('id', id).select().single();
+            const { data, error } = await db.from('parts').update({ stock: newStock }).eq('id', id).select().single();
             if (error) throw error;
 
             return res.status(200).json({ success: true, message: 'Stock updated', updatedPart: dbToFrontend(data) });

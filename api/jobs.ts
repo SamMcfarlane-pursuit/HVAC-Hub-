@@ -1,10 +1,21 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// Initialize Supabase client
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Lazy Supabase client initialization
+let supabase: SupabaseClient | null = null;
+
+function getSupabase(): SupabaseClient | null {
+    if (supabase) return supabase;
+
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+    if (supabaseUrl && supabaseAnonKey) {
+        supabase = createClient(supabaseUrl, supabaseAnonKey);
+        return supabase;
+    }
+    return null;
+}
 
 // Fallback data if database not configured
 const fallbackJobs = [
@@ -41,16 +52,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).end();
     }
 
-    // Check if Supabase is configured
-    const useDatabase = supabaseUrl && supabaseAnonKey;
+    const db = getSupabase();
 
     try {
         if (req.method === 'GET') {
-            if (!useDatabase) {
+            if (!db) {
                 return res.status(200).json(fallbackJobs);
             }
 
-            const { data, error } = await supabase.from('jobs').select('*').order('created_at', { ascending: false });
+            const { data, error } = await db.from('jobs').select('*').order('created_at', { ascending: false });
             if (error) throw error;
 
             return res.status(200).json(data.map(dbToFrontend));
@@ -72,13 +82,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 estimated_duration: body.estimatedDuration || 2
             };
 
-            if (!useDatabase) {
+            if (!db) {
                 const frontendJob = dbToFrontend(newJob);
                 fallbackJobs.unshift(frontendJob);
                 return res.status(201).json(frontendJob);
             }
 
-            const { data, error } = await supabase.from('jobs').insert(newJob).select().single();
+            const { data, error } = await db.from('jobs').insert(newJob).select().single();
             if (error) throw error;
 
             return res.status(201).json(dbToFrontend(data));
@@ -87,7 +97,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (req.method === 'PUT') {
             const { id, ...updates } = req.body;
 
-            if (!useDatabase) {
+            if (!db) {
                 const jobIndex = fallbackJobs.findIndex(j => j.id === id);
                 if (jobIndex > -1) {
                     fallbackJobs[jobIndex] = { ...fallbackJobs[jobIndex], ...updates };
@@ -96,13 +106,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(404).json({ error: 'Job not found' });
             }
 
-            // Convert camelCase to snake_case for DB
             const dbUpdates: any = {};
             if (updates.status) dbUpdates.status = updates.status;
             if (updates.techId) dbUpdates.tech_id = updates.techId;
             if (updates.description) dbUpdates.description = updates.description;
 
-            const { data, error } = await supabase.from('jobs').update(dbUpdates).eq('id', id).select().single();
+            const { data, error } = await db.from('jobs').update(dbUpdates).eq('id', id).select().single();
             if (error) throw error;
 
             return res.status(200).json(dbToFrontend(data));

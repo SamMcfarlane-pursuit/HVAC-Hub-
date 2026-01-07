@@ -1,11 +1,19 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+let supabase: SupabaseClient | null = null;
 
-// Fallback data
+function getSupabase(): SupabaseClient | null {
+    if (supabase) return supabase;
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_ANON_KEY;
+    if (url && key) {
+        supabase = createClient(url, key);
+        return supabase;
+    }
+    return null;
+}
+
 const fallbackAssets = [
     { id: "A001", name: "FLIR Thermal Camera E8", category: "Diagnostics", dailyRate: 45, ownerId: "C902", ownerName: "Mike's HVAC", status: "Available" as const, imageUrl: "https://images.unsplash.com/photo-1581092921461-eab62e97a780?auto=format&fit=crop&q=80&w=400", location: "Brooklyn Navy Yard" },
     { id: "A002", name: "Refrigerant Recovery Machine", category: "Heavy Equipment", dailyRate: 85, ownerId: "C501", ownerName: "Empire Mechanical", status: "Available" as const, imageUrl: "https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&q=80&w=400", location: "Long Island City" },
@@ -41,15 +49,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).end();
     }
 
-    const useDatabase = supabaseUrl && supabaseAnonKey;
+    const db = getSupabase();
 
     try {
         if (req.method === 'GET') {
-            if (!useDatabase) {
+            if (!db) {
                 return res.status(200).json(fallbackAssets);
             }
 
-            const { data, error } = await supabase.from('assets').select('*');
+            const { data, error } = await db.from('assets').select('*');
             if (error) throw error;
 
             return res.status(200).json(data.map(dbToFrontend));
@@ -74,13 +82,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 status: 'Available'
             };
 
-            if (!useDatabase) {
+            if (!db) {
                 const frontendAsset = dbToFrontend(newAsset);
                 fallbackAssets.push(frontendAsset);
                 return res.status(201).json({ success: true, asset: frontendAsset, message: 'Asset listed successfully' });
             }
 
-            const { data, error } = await supabase.from('assets').insert(newAsset).select().single();
+            const { data, error } = await db.from('assets').insert(newAsset).select().single();
             if (error) throw error;
 
             return res.status(201).json({ success: true, asset: dbToFrontend(data), message: 'Asset listed successfully' });
@@ -89,7 +97,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (req.method === 'PUT') {
             const { id, status } = req.body;
 
-            if (!useDatabase) {
+            if (!db) {
                 const assetIndex = fallbackAssets.findIndex(a => a.id === id);
                 if (assetIndex > -1) {
                     if (status) fallbackAssets[assetIndex].status = status;
@@ -98,7 +106,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(404).json({ error: 'Asset not found' });
             }
 
-            const { data, error } = await supabase.from('assets').update({ status }).eq('id', id).select().single();
+            const { data, error } = await db.from('assets').update({ status }).eq('id', id).select().single();
             if (error) throw error;
 
             return res.status(200).json(dbToFrontend(data));
