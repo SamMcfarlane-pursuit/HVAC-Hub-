@@ -145,29 +145,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             if (db) {
                 try {
-                    const { data, error } = await db
+                    const insertData: Record<string, any> = {
+                        id: newOrder.id,
+                        customer_id: newOrder.customerId,
+                        user_id: newOrder.userId,
+                        asset_id: newOrder.assetId,
+                        asset_name: newOrder.assetName,
+                        rental_days: newOrder.rentalDays,
+                        daily_rate: newOrder.dailyRate,
+                        subtotal: newOrder.subtotal,
+                        tax: newOrder.tax,
+                        total: newOrder.total,
+                        status: newOrder.status,
+                        payment_method: newOrder.paymentMethod,
+                        payment_intent_id: newOrder.paymentIntentId,
+                        start_date: newOrder.startDate,
+                        end_date: newOrder.endDate,
+                        receipt_number: newOrder.receiptNumber,
+                        notes: newOrder.notes
+                    };
+
+                    const { error } = await db
                         .from('orders')
-                        .insert({
-                            id: newOrder.id,
-                            customer_id: newOrder.customerId,
-                            user_id: newOrder.userId,
-                            asset_id: newOrder.assetId,
-                            asset_name: newOrder.assetName,
-                            rental_days: newOrder.rentalDays,
-                            daily_rate: newOrder.dailyRate,
-                            subtotal: newOrder.subtotal,
-                            tax: newOrder.tax,
-                            total: newOrder.total,
-                            status: newOrder.status,
-                            payment_method: newOrder.paymentMethod,
-                            payment_intent_id: newOrder.paymentIntentId,
-                            start_date: newOrder.startDate,
-                            end_date: newOrder.endDate,
-                            receipt_number: newOrder.receiptNumber,
-                            notes: newOrder.notes
-                        })
-                        .select()
-                        .single();
+                        .insert(insertData as any);
 
                     if (error) throw error;
                     return res.status(201).json(newOrder);
