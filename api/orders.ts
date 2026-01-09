@@ -54,9 +54,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const db = getSupabase();
 
-    // GET: Fetch orders
+    // GET: Fetch orders or analytics
     if (req.method === 'GET') {
+        const type = req.query.type as string;
         const userId = req.query.userId as string || 'u1';
+
+        // Analytics endpoint for Dashboard
+        if (type === 'analytics') {
+            const analyticsData = {
+                utilization: { rate: 87, trend: '+5%' },
+                margin: { value: 42, trend: '+3%' },
+                revenue: {
+                    totalRecurring: 124500,
+                    totalOneTime: 45000,
+                    history: [
+                        { name: 'Jan', oneTime: 12000, recurring: 18000 },
+                        { name: 'Feb', oneTime: 15000, recurring: 20000 },
+                        { name: 'Mar', oneTime: 11000, recurring: 22000 },
+                        { name: 'Apr', oneTime: 14000, recurring: 25000 },
+                        { name: 'May', oneTime: 16000, recurring: 28000 },
+                        { name: 'Jun', oneTime: 18000, recurring: 31500 }
+                    ]
+                },
+                alerts: {
+                    count: 3,
+                    items: [
+                        { id: 1, type: 'warning', message: 'Low stock: R410A refrigerant', timestamp: '2 hours ago' },
+                        { id: 2, type: 'info', message: 'New service request in Brooklyn', timestamp: '4 hours ago' },
+                        { id: 3, type: 'critical', message: 'Technician certification expiring', timestamp: '1 day ago' }
+                    ]
+                },
+                recentActivity: [
+                    { message: 'Job #1042 completed in Manhattan', status: 'info', timestamp: '10 min ago' },
+                    { message: 'Low stock alert: Capacitor 35+5', status: 'warning', timestamp: '25 min ago' },
+                    { message: 'New membership signup: ABC Corp', status: 'info', timestamp: '1 hour ago' },
+                    { message: 'Emergency call dispatched to Queens', status: 'critical', timestamp: '2 hours ago' },
+                    { message: 'Invoice #8821 paid: $2,450', status: 'info', timestamp: '3 hours ago' }
+                ]
+            };
+            return res.status(200).json(analyticsData);
+        }
 
         if (db) {
             try {

@@ -38,10 +38,11 @@ export const SignUpPage: React.FC = () => {
         setLoading(true);
 
         try {
-            const response = await fetch('/api/signup', {
+            const response = await fetch('/api/auth', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    action: 'signup',
                     fullName: formData.fullName,
                     email: formData.email,
                     company: formData.company,

@@ -18,7 +18,7 @@ export const NotificationBell: React.FC = () => {
     useEffect(() => {
         const fetchNotifications = async () => {
             try {
-                const res = await fetch('/api/analytics');
+                const res = await fetch('/api/orders?type=analytics');
                 if (res.ok) {
                     const data = await res.json();
                     setNotifications(data.recentActivity || []);

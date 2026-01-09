@@ -14,10 +14,10 @@ export const ForgotPasswordPage: React.FC = () => {
         setLoading(true);
 
         try {
-            const response = await fetch('/api/reset-password', {
+            const response = await fetch('/api/auth', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
+                body: JSON.stringify({ action: 'reset-password', email })
             });
 
             const data = await response.json();
