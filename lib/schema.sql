@@ -123,3 +123,61 @@ INSERT INTO assets (id, name, category, daily_rate, owner_id, owner_name, status
   ('A008', 'Pipe Press Tool', 'Plumbing', 65, 'C101', 'Premier Heights', 'Rented', 'https://images.unsplash.com/photo-1542013936693-884638332954?auto=format&fit=crop&q=80&w=400', 'Midtown West'),
   ('A009', 'Portable AC 5 Ton', 'Temporary Cooling', 200, 'C501', 'Empire Mechanical', 'Available', 'https://images.unsplash.com/photo-1632053002228-e4d0d04c3527?auto=format&fit=crop&q=80&w=400', 'Queens Warehouse')
 ON CONFLICT (id) DO NOTHING;
+
+-- Customers table (for personal info and billing)
+CREATE TABLE IF NOT EXISTS customers (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  full_name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT,
+  billing_address_line1 TEXT,
+  billing_address_line2 TEXT,
+  billing_city TEXT,
+  billing_state TEXT,
+  billing_zip TEXT,
+  billing_country TEXT DEFAULT 'US',
+  save_for_future BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Orders table (for purchase tracking and receipts)
+CREATE TABLE IF NOT EXISTS orders (
+  id TEXT PRIMARY KEY,
+  customer_id TEXT REFERENCES customers(id),
+  user_id TEXT NOT NULL,
+  asset_id TEXT REFERENCES assets(id),
+  asset_name TEXT NOT NULL,
+  rental_days INTEGER NOT NULL,
+  daily_rate DECIMAL(10,2) NOT NULL,
+  subtotal DECIMAL(10,2) NOT NULL,
+  tax DECIMAL(10,2) DEFAULT 0,
+  total DECIMAL(10,2) NOT NULL,
+  status TEXT DEFAULT 'Completed',
+  payment_method TEXT DEFAULT 'card',
+  payment_intent_id TEXT,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  receipt_number TEXT UNIQUE NOT NULL,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+
+-- Policies
+CREATE POLICY "Allow all on customers" ON customers FOR ALL USING (true);
+CREATE POLICY "Allow all on orders" ON orders FOR ALL USING (true);
+
+-- Sample customer (admin user)
+INSERT INTO customers (id, user_id, full_name, email, phone, billing_address_line1, billing_city, billing_state, billing_zip) VALUES
+  ('CUST001', 'u1', 'Admin User', 'admin@hvachub.com', '555-0100', '123 HVAC Street', 'New York', 'NY', '10001')
+ON CONFLICT (id) DO NOTHING;
+
+-- Sample order (demo purchase)
+INSERT INTO orders (id, customer_id, user_id, asset_id, asset_name, rental_days, daily_rate, subtotal, tax, total, status, start_date, end_date, receipt_number) VALUES
+  ('ORD001', 'CUST001', 'u1', 'A003', 'Hydro-Jetting Rig Used', 3, 150.00, 450.00, 36.00, 486.00, 'Completed', '2026-01-05', '2026-01-08', 'RCP-20260105-001')
+ON CONFLICT (id) DO NOTHING;

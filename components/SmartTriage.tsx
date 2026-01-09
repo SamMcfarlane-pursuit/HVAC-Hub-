@@ -90,8 +90,8 @@ export const SmartTriage: React.FC = () => {
                   key={opt.id}
                   onClick={() => setFocusArea(focusArea === opt.id ? null : opt.id)}
                   className={`px-3 py-1.5 rounded-full text-xs font-bold border transition flex items-center ${focusArea === opt.id
-                      ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-900/20'
-                      : 'bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500'
+                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-900/20'
+                    : 'bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500'
                     }`}
                 >
                   {opt.label}
@@ -184,6 +184,34 @@ export const SmartTriage: React.FC = () => {
 
               {/* Parts & Compliance */}
               <div className="space-y-4 flex-1">
+                {/* Visual Findings - Issues detected from photo */}
+                {result.visualFindings && result.visualFindings.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs text-slate-400 uppercase font-bold">Visual Findings</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${result.issueSeverity === 'Critical' ? 'bg-red-900/50 text-red-300 border border-red-500/30' :
+                          result.issueSeverity === 'Warning' ? 'bg-amber-900/50 text-amber-300 border border-amber-500/30' :
+                            result.issueSeverity === 'Advisory' ? 'bg-blue-900/50 text-blue-300 border border-blue-500/30' :
+                              'bg-emerald-900/50 text-emerald-300 border border-emerald-500/30'
+                        }`}>
+                        {result.issueSeverity}
+                      </span>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {result.visualFindings.map((finding, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-sm text-slate-300">
+                          <span className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${result.issueSeverity === 'Critical' ? 'bg-red-500' :
+                              result.issueSeverity === 'Warning' ? 'bg-amber-500' :
+                                result.issueSeverity === 'Advisory' ? 'bg-blue-500' :
+                                  'bg-emerald-500'
+                            }`}></span>
+                          {finding}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 <div>
                   <span className="text-xs text-slate-400 uppercase font-bold mb-2 block">Recommended Parts</span>
                   <div className="flex flex-wrap gap-2">

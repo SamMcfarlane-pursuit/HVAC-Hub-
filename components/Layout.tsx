@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Activity, Map, Package, Wrench, Menu, PieChart, Power, Settings } from 'lucide-react';
+import { LayoutDashboard, Activity, Map, Package, Wrench, Menu, Building2, Power, Settings, ShoppingBag } from 'lucide-react';
 import { NotificationBell } from './NotificationBell';
 import { ConnectionStatus } from './ConnectionStatus';
 
@@ -61,16 +61,38 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         <nav className="p-4 space-y-2">
           <NavItem to="/" icon={LayoutDashboard} label="Dashboard" />
-          <NavItem to="/market" icon={PieChart} label="Market Intelligence" />
           <NavItem to="/triage" icon={Activity} label="Smart Triage AI" />
           <NavItem to="/routing" icon={Map} label="Live Routing" />
           <NavItem to="/supply" icon={Package} label="Supply Chain" />
           <NavItem to="/assets" icon={Wrench} label="Asset Network" />
+          <NavItem to="/orders" icon={ShoppingBag} label="My Orders" />
           <NavItem to="/settings" icon={Settings} label="Settings" />
         </nav>
 
-        <div className="absolute bottom-0 w-full p-4 border-t border-slate-800">
-          <div className="flex items-center justify-between">
+        <div className="absolute bottom-0 w-full border-t border-slate-800">
+          {/* Bottom Links */}
+          <div className="px-4 py-3 flex items-center justify-center gap-4 border-b border-slate-800/50">
+            <NavLink
+              to="/about"
+              className={({ isActive }) =>
+                `flex items-center gap-1.5 text-xs font-medium transition-colors ${isActive ? 'text-blue-400' : 'text-slate-500 hover:text-slate-300'
+                }`
+              }
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              About Us
+            </NavLink>
+            <span className="text-slate-700">•</span>
+            <a
+              href="mailto:support@hvachub.io"
+              className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              Support
+            </a>
+          </div>
+
+          {/* User Profile */}
+          <div className="p-4 flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <img src="https://picsum.photos/id/1005/100/100" className="w-10 h-10 rounded-full border border-slate-600" alt="Admin" />
               <div>

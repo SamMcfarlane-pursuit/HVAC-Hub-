@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Wrench, ShieldCheck, Calendar, MapPin, User, Loader2, Star, Filter, Search, TrendingUp, Clock, Banknote, BadgeCheck, Plus, CalendarDays } from 'lucide-react';
-import { Asset } from '../types';
+import { Asset, Order } from '../types';
 import { PaymentModal } from './PaymentModal';
 import { ListAssetModal } from './ListAssetModal';
 
@@ -47,7 +47,7 @@ export const AssetSharing: React.FC = () => {
         setIsPaymentModalOpen(true);
     };
 
-    const handlePaymentSuccess = async () => {
+    const handlePaymentSuccess = async (order: Order) => {
         if (!selectedAsset) return;
 
         const assetId = selectedAsset.id;
@@ -63,6 +63,7 @@ export const AssetSharing: React.FC = () => {
             });
 
             setSelectedAsset(null);
+            console.log('Order created:', order.receiptNumber);
         } catch (error) {
             console.error('Booking failed', error);
             fetchAssets();
@@ -298,6 +299,9 @@ export const AssetSharing: React.FC = () => {
                     amount={selectedAsset.dailyRate * rentalDays}
                     assetName={selectedAsset.name}
                     assetId={selectedAsset.id}
+                    rentalDays={rentalDays}
+                    startDate={startDate}
+                    dailyRate={selectedAsset.dailyRate}
                 />
             )}
 

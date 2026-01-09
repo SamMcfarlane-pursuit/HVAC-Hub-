@@ -37,7 +37,10 @@ export const analyzeHVACIssue = async (
       requiredSkillLevel: TechLevel.JOURNEYMAN,
       recommendedParts: ["Capacitor", "Contactor", "Filter", "Refrigerant"],
       estimatedHours: 2.5,
-      complianceNotes: "Demo: Always verify refrigerant levels per Local Law 97. Log all R-410A handling."
+      complianceNotes: "Demo: Always verify refrigerant levels per Local Law 97. Log all R-410A handling.",
+      issueDetected: true,
+      issueSeverity: "Warning" as const,
+      visualFindings: ["Demo: Dirty condenser coils detected", "Demo: Minor corrosion on electrical terminals", "Demo: Filter needs replacement"]
     };
 
   } catch (error) {
@@ -48,7 +51,10 @@ export const analyzeHVACIssue = async (
       requiredSkillLevel: TechLevel.MASTER,
       recommendedParts: [],
       estimatedHours: 0,
-      complianceNotes: "System error."
+      complianceNotes: "System error.",
+      issueDetected: false,
+      issueSeverity: "None" as const,
+      visualFindings: []
     };
   }
 };

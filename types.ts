@@ -70,4 +70,61 @@ export interface TriageResult {
   recommendedParts: string[];
   estimatedHours: number;
   complianceNotes: string;
+  issueDetected: boolean;
+  issueSeverity: 'Critical' | 'Warning' | 'Advisory' | 'None';
+  visualFindings: string[];
+}
+
+// Purchasing System Types
+export interface BillingAddress {
+  line1: string;
+  line2?: string;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
+}
+
+export interface Customer {
+  id: string;
+  userId: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  billingAddress?: BillingAddress;
+  saveForFuture: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Order {
+  id: string;
+  customerId: string;
+  userId: string;
+  assetId: string;
+  assetName: string;
+  rentalDays: number;
+  dailyRate: number;
+  subtotal: number;
+  tax: number;
+  total: number;
+  status: 'Pending' | 'Completed' | 'Cancelled' | 'Refunded';
+  paymentMethod: string;
+  paymentIntentId?: string;
+  startDate: string;
+  endDate: string;
+  receiptNumber: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface Receipt {
+  order: Order;
+  customer: Customer;
+  assetDetails: {
+    name: string;
+    category: string;
+    ownerName: string;
+    location: string;
+  };
 }

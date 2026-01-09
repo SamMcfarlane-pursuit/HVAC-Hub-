@@ -17,7 +17,8 @@ const SmartTriage = lazy(() => import('./components/SmartTriage').then(m => ({ d
 const JobMap = lazy(() => import('./components/JobMap').then(m => ({ default: m.JobMap })));
 const SupplyChain = lazy(() => import('./components/SupplyChain').then(m => ({ default: m.SupplyChain })));
 const AssetSharing = lazy(() => import('./components/AssetSharing').then(m => ({ default: m.AssetSharing })));
-const MarketIntelligence = lazy(() => import('./components/MarketIntelligence').then(m => ({ default: m.MarketIntelligence })));
+const AboutUs = lazy(() => import('./components/AboutUs').then(m => ({ default: m.AboutUs })));
+const OrderHistory = lazy(() => import('./components/OrderHistory').then(m => ({ default: m.OrderHistory })));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -44,11 +45,12 @@ const App: React.FC = () => {
               <Suspense fallback={<PageLoader />}>
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
-                  <Route path="/market" element={<MarketIntelligence />} />
+                  <Route path="/about" element={<AboutUs />} />
                   <Route path="/triage" element={<SmartTriage />} />
                   <Route path="/routing" element={<JobMap />} />
                   <Route path="/supply" element={<SupplyChain />} />
                   <Route path="/assets" element={<AssetSharing />} />
+                  <Route path="/orders" element={<OrderHistory />} />
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
